@@ -3,7 +3,7 @@ import VSCodeFileExplorer from './components/VSCodeFileExplorer';
 import './App.css';
 
 //ADD YOUR GEMINI API KEY HERE¸
-const GEMINI_API_KEY = 'AIzaSyCb3t3UzDq9qnP6uZrWqldwV3-kfcdqK9E';
+const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 function App() {
   const [showEditor, setShowEditor] = useState(false);
