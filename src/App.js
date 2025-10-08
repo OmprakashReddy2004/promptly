@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import VSCodeFileExplorer from './components/VSCodeFileExplorer';
 import './App.css';
 
-//ADD YOUR GEMINI API KEY HERE¸
+//ADD YOUR GEMINI API KEY HERE¸
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
 
 function App() {
@@ -40,7 +40,7 @@ Return ONLY a valid JSON object (no markdown, no explanation, no code blocks) in
       "type": "folder",
       "children": [
         {
-          "name": "App.js",
+          "name": "App.jsx",
           "type": "file",
           "content": "// actual code content here"
         }
@@ -56,7 +56,10 @@ Rules:
 4. Add comments in the code
 5. Make the code functional and complete
 6. Return ONLY the JSON object, no markdown formatting, no \`\`\`json blocks
-7. Escape special characters properly in the content field (use \\n for newlines, \\" for quotes)`
+7. Escape special characters properly in the content field (use \\n for newlines, \\" for quotes)
+8. IMPORTANT: For React projects, use .jsx extension for React component files (not .js)
+9. Use .js extension only for non-React JavaScript files (utilities, config files, etc.)
+10. Example: App.jsx, Button.jsx, Header.jsx for components; utils.js, config.js for utilities`
             }]
           }],
           generationConfig: {
