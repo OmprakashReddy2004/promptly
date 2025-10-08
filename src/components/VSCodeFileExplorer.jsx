@@ -197,7 +197,7 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
     }
   };
 
-  // Build file tree from backend
+  // Build file tree from backend and merge with existing
   const buildFileTree = async (dirPath = '.') => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/listDir`, {
@@ -209,7 +209,7 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
       });
 
       const data = await response.json();
-      if (!data.success || !data.files) return null;
+      if (!data.success || !data.files) return [];
 
       const children = await Promise.all(
         data.files.map(async (file) => {
@@ -220,7 +220,7 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
             return {
               name: file.name,
               type: 'folder',
-              children: subChildren || []
+              children: subChildren
             };
           } else {
             // Try to read file content
@@ -253,34 +253,35 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
       return children;
     } catch (error) {
       console.error('Error building file tree:', error);
-      return null;
+      return [];
     }
   };
 
-  // Refresh file system from backend
+  // Refresh file system from backend - merge with AI generated structure
   const refreshFileSystem = async () => {
     try {
-      setTerminalOutput(prev => [...prev, { 
-        type: 'info', 
-        text: '🔄 Refreshing file explorer...' 
-      }]);
-
       const children = await buildFileTree('.');
       
-      if (children) {
-        const newFileSystem = {
-          name: 'workspace',
-          type: 'folder',
-          children: children
-        };
+      if (children && children.length > 0) {
+        // Update the existing file system with new files from disk
+        setFileSystem(prevFS => {
+          // If we have a project-root or similar, update its children
+          if (prevFS.type === 'folder') {
+            return {
+              ...prevFS,
+              children: children
+            };
+          }
+          // Otherwise create a new root
+          return {
+            name: prevFS.name || 'project-root',
+            type: 'folder',
+            children: children
+          };
+        });
         
-        setFileSystem(newFileSystem);
-        setExpandedFolders(new Set(['workspace']));
-        
-        setTerminalOutput(prev => [...prev, { 
-          type: 'success', 
-          text: '✅ File explorer refreshed!' 
-        }]);
+        // Preserve expanded folders
+        setExpandedFolders(prev => new Set([...prev, fileSystem.name]));
       }
     } catch (error) {
       console.error('Error refreshing file system:', error);

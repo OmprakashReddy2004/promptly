@@ -24,13 +24,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# In your project root (own-editor/)
-cat >> .gitignore << 'EOF'
-
 # Backend workspace (AI-generated files)
 backend/workspace/
 
 # Backend dependencies
 backend/node_modules/
-
-EOF
