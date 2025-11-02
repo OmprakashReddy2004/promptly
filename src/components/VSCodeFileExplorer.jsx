@@ -1,10 +1,15 @@
+// COMPLETE VSCodeFileExplorer.jsx with Live Preview Integration
+// Copy this entire file to replace your current src/components/VSCodeFileExplorer.jsx
+
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronRight, ChevronDown, File, Folder, FolderOpen, Plus, X, Save, Terminal as TerminalIcon, RefreshCw, AlertCircle } from 'lucide-react';
+import { ChevronRight, ChevronDown, File, Folder, FolderOpen, Plus, X, Save, Terminal as TerminalIcon, RefreshCw, AlertCircle, Code, Eye, Columns } from 'lucide-react';
 import Editor, { loader } from '@monaco-editor/react';
+import LivePreview from './LivePreview';
 
 const BACKEND_URL = 'http://localhost:5001';
 
 const VSCodeFileExplorer = ({ generatedFiles }) => {
+  // All state declarations
   const [fileSystem, setFileSystem] = useState(generatedFiles || {
     name: 'project-root',
     type: 'folder',
@@ -42,6 +47,7 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [fileErrors, setFileErrors] = useState({});
   const [currentErrors, setCurrentErrors] = useState([]);
+  const [currentView, setCurrentView] = useState('editor'); // 'editor', 'preview', 'split'
   
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
@@ -112,7 +118,7 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
     return languageMap[ext] || 'plaintext';
   };
 
-  // Validate JavaScript/TypeScript/JSX code with real-time error detection
+  // Validate JavaScript/TypeScript code
   const validateCode = (code, language, filePath) => {
     if (!monacoRef.current || !editorRef.current) return;
 
@@ -123,7 +129,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
     const markers = [];
     const errors = [];
 
-    // Only validate JavaScript-like languages
     if (!['javascript', 'typescript'].includes(language)) {
       monaco.editor.setModelMarkers(model, 'syntax', []);
       setCurrentErrors([]);
@@ -134,7 +139,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
     try {
       const lines = code.split('\n');
       
-      // Track brackets, braces, parentheses
       let openBraces = 0;
       let openParens = 0;
       let openBrackets = 0;
@@ -145,23 +149,18 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
       lines.forEach((line, lineIndex) => {
         const trimmed = line.trim();
         
-        // Handle multiline comments
         if (trimmed.includes('/*')) inMultilineComment = true;
         if (trimmed.includes('*/')) inMultilineComment = false;
         
-        // Skip comments and empty lines
         if (inMultilineComment || trimmed.startsWith('//') || !trimmed) return;
         
-        // Character-by-character analysis
         for (let i = 0; i < line.length; i++) {
           const char = line[i];
           const prevChar = i > 0 ? line[i - 1] : '';
           const nextChar = i < line.length - 1 ? line[i + 1] : '';
           
-          // Handle single-line comments
           if (char === '/' && nextChar === '/' && !inString) break;
           
-          // Handle strings
           if ((char === '"' || char === "'" || char === '`') && prevChar !== '\\') {
             if (!inString) {
               inString = true;
@@ -172,7 +171,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
             }
           }
           
-          // Count brackets outside strings
           if (!inString) {
             if (char === '{') openBraces++;
             if (char === '}') {
@@ -227,7 +225,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
           }
         }
         
-        // Check for console.log (info only)
         if (!inString && trimmed.includes('console.log')) {
           const consoleIndex = line.indexOf('console.log');
           markers.push({
@@ -241,7 +238,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
         }
       });
       
-      // Check for unclosed brackets at end
       if (openBraces > 0) {
         markers.push({
           severity: monaco.MarkerSeverity.Error,
@@ -294,14 +290,10 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
       console.error('Validation error:', err);
     }
 
-    // Set markers in editor
     monaco.editor.setModelMarkers(model, 'syntax', markers);
-    
-    // Update error state
     setCurrentErrors(errors);
     setFileErrors(prev => ({ ...prev, [filePath]: errors }));
     
-    // Log errors to terminal
     if (errors.length > 0 && filePath === activeTab) {
       setTerminalOutput(prev => {
         const filtered = prev.filter(item => !item.text.startsWith('❌ Error in') && !item.text.startsWith('✅ No syntax errors'));
@@ -321,7 +313,7 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
     }
   };
 
-  // Handle editor content change with debounced validation
+  // Handle editor content change
   const handleEditorChange = (value) => {
     if (activeTab) {
       setFileContents(prev => ({
@@ -329,7 +321,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
         [activeTab]: value
       }));
       
-      // Debounce validation
       if (validationTimeoutRef.current) {
         clearTimeout(validationTimeoutRef.current);
       }
@@ -338,6 +329,26 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
         const fileName = activeTab.split('/').pop();
         const language = getLanguageFromFileName(fileName);
         validateCode(value, language, activeTab);
+        
+        // Update file system with new content
+        const updateFileContent = (node, path = '') => {
+          const currentPath = path ? `${path}/${node.name}` : node.name;
+          
+          if (currentPath === activeTab && node.type === 'file') {
+            return { ...node, content: value };
+          }
+          
+          if (node.type === 'folder' && node.children) {
+            return {
+              ...node,
+              children: node.children.map(child => updateFileContent(child, currentPath))
+            };
+          }
+          
+          return node;
+        };
+        
+        setFileSystem(prevFS => updateFileContent(prevFS));
       }, 500);
     }
   };
@@ -348,7 +359,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
     monacoRef.current = monaco;
     setIsEditorReady(true);
     
-    // Define custom theme
     monaco.editor.defineTheme('vscode-dark', {
       base: 'vs-dark',
       inherit: true,
@@ -370,7 +380,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
     
     monaco.editor.setTheme('vscode-dark');
     
-    // Configure language features
     monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: false,
       noSyntaxValidation: false
@@ -386,7 +395,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
       allowJs: true,
     });
     
-    // Initial validation
     if (activeTab) {
       const content = fileContents[activeTab] || '';
       const fileName = activeTab.split('/').pop();
@@ -805,7 +813,6 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
       setActiveTab(newTabs[newTabs.length - 1] || null);
     }
     
-    // Clear errors for closed file
     setFileErrors(prev => {
       const next = { ...prev };
       delete next[path];
@@ -957,46 +964,135 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
           )}
         </div>
 
+        {/* View Toggle Buttons */}
+        <div className="flex bg-gray-800 border-b border-gray-700 px-4 py-2 gap-2">
+          <button
+            onClick={() => setCurrentView('editor')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors ${
+              currentView === 'editor' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            <Code size={16} />
+            <span className="text-sm">Code</span>
+          </button>
+          
+          <button
+            onClick={() => setCurrentView('preview')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors ${
+              currentView === 'preview' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            <Eye size={16} />
+            <span className="text-sm">Preview</span>
+          </button>
+          
+          <button
+            onClick={() => setCurrentView('split')}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors ${
+              currentView === 'split' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            }`}
+          >
+            <Columns size={16} />
+            <span className="text-sm">Split</span>
+          </button>
+        </div>
+
         {/* Content Area */}
         <div className="flex-1 overflow-hidden" style={{ height: showTerminal ? `calc(100% - ${terminalHeight}px)` : '100%' }}>
-          {activeTab ? (
-            // Monaco Editor
-            <div className="h-full flex flex-col">
-              {currentErrors.length > 0 && (
-                <div className="bg-red-900 bg-opacity-20 border-b border-red-700 px-4 py-2">
-                  <div className="flex items-center gap-2 text-red-400 text-sm">
-                    <AlertCircle size={16} />
-                    <span>{currentErrors.length} error{currentErrors.length > 1 ? 's' : ''} found</span>
+          {currentView === 'editor' && (
+            activeTab ? (
+              <div className="h-full flex flex-col">
+                {currentErrors.length > 0 && (
+                  <div className="bg-red-900 bg-opacity-20 border-b border-red-700 px-4 py-2">
+                    <div className="flex items-center gap-2 text-red-400 text-sm">
+                      <AlertCircle size={16} />
+                      <span>{currentErrors.length} error{currentErrors.length > 1 ? 's' : ''} found</span>
+                    </div>
                   </div>
+                )}
+                <Editor
+                  height="100%"
+                  language={currentLanguage}
+                  value={fileContents[activeTab] || ''}
+                  onChange={handleEditorChange}
+                  onMount={handleEditorDidMount}
+                  theme="vscode-dark"
+                  loading={<div className="flex items-center justify-center h-full">Loading editor...</div>}
+                  options={{
+                    fontSize: 14,
+                    minimap: { enabled: true },
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 2,
+                    wordWrap: 'on',
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    quickSuggestions: true,
+                    suggestOnTriggerCharacters: true,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                <div className="text-center">
+                  <File size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>Select a file to start editing</p>
                 </div>
-              )}
-              <Editor
-                height="100%"
-                language={currentLanguage}
-                value={fileContents[activeTab] || ''}
-                onChange={handleEditorChange}
-                onMount={handleEditorDidMount}
-                theme="vscode-dark"
-                loading={<div className="flex items-center justify-center h-full">Loading editor...</div>}
-                options={{
-                  fontSize: 14,
-                  minimap: { enabled: true },
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  tabSize: 2,
-                  wordWrap: 'on',
-                  formatOnPaste: true,
-                  formatOnType: true,
-                  quickSuggestions: true,
-                  suggestOnTriggerCharacters: true,
-                }}
-              />
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
-              <div className="text-center">
-                <File size={48} className="mx-auto mb-4 opacity-50" />
-                <p>Select a file to start editing</p>
+              </div>
+            )
+          )}
+          
+          {currentView === 'preview' && (
+            <LivePreview fileSystem={fileSystem} activeFile={activeTab} />
+          )}
+          
+          {currentView === 'split' && (
+            <div className="flex h-full">
+              <div className="flex-1 border-r border-gray-700">
+                {activeTab ? (
+                  <div className="h-full flex flex-col">
+                    {currentErrors.length > 0 && (
+                      <div className="bg-red-900 bg-opacity-20 border-b border-red-700 px-4 py-2">
+                        <div className="flex items-center gap-2 text-red-400 text-sm">
+                          <AlertCircle size={16} />
+                          <span>{currentErrors.length} error{currentErrors.length > 1 ? 's' : ''} found</span>
+                        </div>
+                      </div>
+                    )}
+                    <Editor
+                      height="100%"
+                      language={currentLanguage}
+                      value={fileContents[activeTab] || ''}
+                      onChange={handleEditorChange}
+                      onMount={handleEditorDidMount}
+                      theme="vscode-dark"
+                      loading={<div className="flex items-center justify-center h-full">Loading editor...</div>}
+                      options={{
+                        fontSize: 14,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        tabSize: 2,
+                        wordWrap: 'on',
+                        formatOnPaste: true,
+                        formatOnType: true,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500">
+                    <p>Select a file to edit</p>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <LivePreview fileSystem={fileSystem} activeFile={activeTab} />
               </div>
             </div>
           )}
