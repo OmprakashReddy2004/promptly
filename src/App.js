@@ -548,6 +548,8 @@ function AppContent() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [currentProject, setCurrentProject] = useState(null);
+  const [viewTransitionLoading, setViewTransitionLoading] = useState(false);
+
 
   // ===== DOCS HOOKS =====
   const [showDocModal, setShowDocModal] = useState(false);
@@ -2132,28 +2134,55 @@ export default App;`;
       </div>
     );
   }
+
+  if (viewTransitionLoading) {
+    return (
+      <div className="h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center text-white">
+          <div className="animate-spin w-12 h-12 border-4 border-purple-500 border-b-transparent rounded-full mx-auto mb-3"></div>
+          <p className="text-gray-400">Opening workspace...</p>
+        </div>
+      </div>
+    );
+  }
+  
   // Add after authentication check, before "Transition to Dashboard":
 if (currentView === 'dashboard') {
   return (
     <Dashboard 
-      onNewProject={() => {
+    onNewProject={() => {
+      setViewTransitionLoading(true);
+      setTimeout(() => {
         setCurrentView('prompt');
         setCurrentProject(null);
         setPrompt('');
         setIdeation(null);
         setGeneratedFiles(null);
-      }}
+        setViewTransitionLoading(false);
+      }, 600);
+    }}    
       onOpenProject={async (project) => {
-        setCurrentProject(project);
-        if (project.ideation) {
-          setIdeation(project.ideation);
-          setCurrentView('ideation');
-        }
-        if (project.fileStructure) {
-          setGeneratedFiles(project.fileStructure);
-          setCurrentView('editor');
-        }
-      }}
+        setViewTransitionLoading(true);
+      
+        // wait a little to feel smooth
+        setTimeout(() => {
+          setCurrentProject(project);
+      
+          if (project.ideation) {
+            setIdeation(project.ideation);
+            setCurrentView('ideation');
+          } else {
+            setCurrentView('prompt');
+          }
+      
+          if (project.fileStructure) {
+            setGeneratedFiles(project.fileStructure);
+            setCurrentView('editor');
+          }
+      
+          setViewTransitionLoading(false);
+        }, 800);
+      }}      
       onLogout={handleLogout}
     />
   );

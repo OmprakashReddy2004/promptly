@@ -1,648 +1,476 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Folder, 
-  Clock, 
-  Trash2, 
-  Edit, 
-  Copy, 
-  MoreVertical,
-  Filter,
-  Grid,
-  List,
-  TrendingUp,
-  Code,
-  Loader,
-  Star,
-  Calendar,
-  FileText,
-  CheckCircle,
-  AlertCircle
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  Plus, Search, Folder, Clock, Trash2, Edit, Copy, MoreVertical,
+  Grid, List, TrendingUp, Code, Loader, Star, FileText, CheckCircle, AlertCircle
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
-
-// ✅ Add this import
-import { useAuth } from '../contexts/AuthContext';
-
-
-// Mock Project Service (replace with your actual Firestore service)
+// --- MOCK SERVICE (replace with Firestore in real app) ---
 const projectService = {
-  getUserProjects: async (userId) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return {
-      success: true,
-      projects: [
-        {
-          id: '1',
-          name: 'E-commerce Platform',
-          description: 'Full-stack online store with cart and payments',
-          status: 'in-progress',
-          createdAt: new Date('2024-01-10'),
-          updatedAt: new Date('2024-01-15'),
-          lastAccessedAt: new Date('2024-01-15'),
-          techStack: {
-            frontend: ['React', 'Tailwind CSS'],
-            backend: ['Node.js', 'Express'],
-            database: ['MongoDB']
+    getUserProjects: async (userId) => {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return {
+        success: true,
+        projects: [
+          {
+            id: '1',
+            name: 'E-commerce Platform',
+            description: 'Full-stack online store with cart and payments',
+            status: 'in-progress',
+            createdAt: new Date('2024-01-10'),
+            updatedAt: new Date('2024-01-15'),
+            lastAccessedAt: new Date('2024-01-15'),
+            techStack: {
+              frontend: ['React', 'Tailwind CSS'],
+              backend: ['Node.js', 'Express'],
+              database: ['MongoDB']
+            },
+            thumbnail: null,
+            progress: 75,
+            filesCount: 24,
+            linesOfCode: 3420
           },
-          thumbnail: null,
-          progress: 75,
-          filesCount: 24,
-          linesOfCode: 3420
-        },
-        {
-          id: '2',
-          name: 'Task Manager Pro',
-          description: 'Productivity app with AI suggestions',
-          status: 'completed',
-          createdAt: new Date('2024-01-08'),
-          updatedAt: new Date('2024-01-14'),
-          lastAccessedAt: new Date('2024-01-14'),
-          techStack: {
-            frontend: ['React', 'Redux'],
-            backend: ['Firebase']
+          {
+            id: '2',
+            name: 'Task Manager Pro',
+            description: 'Productivity app with AI suggestions',
+            status: 'completed',
+            createdAt: new Date('2024-01-08'),
+            updatedAt: new Date('2024-01-14'),
+            lastAccessedAt: new Date('2024-01-14'),
+            techStack: {
+              frontend: ['React', 'Redux'],
+              backend: ['Firebase']
+            },
+            progress: 100,
+            filesCount: 18,
+            linesOfCode: 2150
           },
-          progress: 100,
-          filesCount: 18,
-          linesOfCode: 2150
-        },
-        {
-          id: '3',
-          name: 'Portfolio Website',
-          description: 'Modern portfolio with animations',
-          status: 'draft',
-          createdAt: new Date('2024-01-12'),
-          updatedAt: new Date('2024-01-12'),
-          lastAccessedAt: new Date('2024-01-12'),
-          techStack: {
-            frontend: ['React', 'Framer Motion']
+          {
+            id: '3',
+            name: 'Portfolio Website',
+            description: 'Modern portfolio with animations',
+            status: 'draft',
+            createdAt: new Date('2024-01-12'),
+            updatedAt: new Date('2024-01-12'),
+            lastAccessedAt: new Date('2024-01-12'),
+            techStack: {
+              frontend: ['React', 'Framer Motion']
+            },
+            progress: 30,
+            filesCount: 8,
+            linesOfCode: 850
           },
-          progress: 30,
-          filesCount: 8,
-          linesOfCode: 850
-        },
-        {
-          id: '4',
-          name: 'Weather Dashboard',
-          description: 'Real-time weather with maps',
-          status: 'in-progress',
-          createdAt: new Date('2024-01-09'),
-          updatedAt: new Date('2024-01-13'),
-          lastAccessedAt: new Date('2024-01-13'),
-          techStack: {
-            frontend: ['React'],
-            backend: ['OpenWeather API']
+          {
+            id: '4',
+            name: 'Weather Dashboard',
+            description: 'Real-time weather with maps',
+            status: 'in-progress',
+            createdAt: new Date('2024-01-09'),
+            updatedAt: new Date('2024-01-13'),
+            lastAccessedAt: new Date('2024-01-13'),
+            techStack: {
+              frontend: ['React'],
+              backend: ['OpenWeather API']
+            },
+            progress: 60,
+            filesCount: 12,
+            linesOfCode: 1540
           },
-          progress: 60,
-          filesCount: 12,
-          linesOfCode: 1540
-        },
-        {
-          id: '5',
-          name: 'Social Media App',
-          description: 'Connect with friends and share moments',
-          status: 'in-progress',
-          createdAt: new Date('2024-01-05'),
-          updatedAt: new Date('2024-01-11'),
-          lastAccessedAt: new Date('2024-01-11'),
-          techStack: {
-            frontend: ['React', 'Redux'],
-            backend: ['Node.js', 'Socket.io'],
-            database: ['PostgreSQL']
+          {
+            id: '5',
+            name: 'Social Media App',
+            description: 'Connect with friends and share moments',
+            status: 'in-progress',
+            createdAt: new Date('2024-01-05'),
+            updatedAt: new Date('2024-01-11'),
+            lastAccessedAt: new Date('2024-01-11'),
+            techStack: {
+              frontend: ['React', 'Redux'],
+              backend: ['Node.js', 'Socket.io'],
+              database: ['PostgreSQL']
+            },
+            progress: 45,
+            filesCount: 32,
+            linesOfCode: 4200
           },
-          progress: 45,
-          filesCount: 32,
-          linesOfCode: 4200
-        },
-        {
-          id: '6',
-          name: 'Recipe Finder',
-          description: 'Discover and save delicious recipes',
-          status: 'completed',
-          createdAt: new Date('2024-01-03'),
-          updatedAt: new Date('2024-01-10'),
-          lastAccessedAt: new Date('2024-01-10'),
-          techStack: {
-            frontend: ['React'],
-            backend: ['Spoonacular API']
-          },
-          progress: 100,
-          filesCount: 15,
-          linesOfCode: 1890
+          {
+            id: '6',
+            name: 'Recipe Finder',
+            description: 'Discover and save delicious recipes',
+            status: 'completed',
+            createdAt: new Date('2024-01-03'),
+            updatedAt: new Date('2024-01-10'),
+            lastAccessedAt: new Date('2024-01-10'),
+            techStack: {
+              frontend: ['React'],
+              backend: ['Spoonacular API']
+            },
+            progress: 100,
+            filesCount: 15,
+            linesOfCode: 1890
+          }
+        ]
+      };
+    },
+    
+    deleteProject: async (projectId) => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { success: true };
+    },
+    
+    duplicateProject: async (projectId, userId) => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return { success: true, projectId: 'new-' + projectId };
+    },
+    
+    updateLastAccessed: async (projectId) => {
+      await new Promise(resolve => setTimeout(resolve, 200));
+      return { success: true };
+    },
+    
+    getProjectStats: async (userId) => {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      return {
+        success: true,
+        stats: {
+          totalProjects: 6,
+          draftProjects: 1,
+          inProgressProjects: 3,
+          completedProjects: 2,
+          totalLines: 14050,
+          totalFiles: 109
         }
-      ]
-    };
-  },
-  
-  deleteProject: async (projectId) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true };
-  },
-  
-  duplicateProject: async (projectId, userId) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return { success: true, projectId: 'new-' + projectId };
-  },
-  
-  updateLastAccessed: async (projectId) => {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return { success: true };
-  },
-  
-  getProjectStats: async (userId) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return {
-      success: true,
-      stats: {
-        totalProjects: 6,
-        draftProjects: 1,
-        inProgressProjects: 3,
-        completedProjects: 2,
-        totalLines: 14050,
-        totalFiles: 109
-      }
-    };
-  }
-};
+      };
+    }
+  };
 
 const Dashboard = ({ onNewProject, onOpenProject, onLogout }) => {
   const { currentUser } = useAuth();
   const [projects, setProjects] = useState([]);
   const [filteredProjects, setFilteredProjects] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [stats, setStats] = useState(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-
-  // Load projects and stats
   useEffect(() => {
     if (currentUser) {
-      loadProjects(true); // initial load
+      loadProjects();
       loadStats();
     }
-  }, [currentUser]);  
+  }, [currentUser]);
 
-  // Filter projects
-  useEffect(() => {
-    filterProjects();
-  }, [searchQuery, filterStatus, projects]);
+  useEffect(() => filterProjects(), [projects, searchQuery, filterStatus]);
 
-  const loadProjects = async (isInitial = false) => {
-    // Don't show loading spinner for initial load (we already have transition screen)
-    // Only show loading for subsequent refreshes
-    
-    const { success, projects: userProjects } = await projectService.getUserProjects(currentUser.uid);
-    if (success) {
-      setProjects(userProjects);
-    }
+  const loadProjects = async () => {
+    const { success, projects: data } = await projectService.getUserProjects(currentUser.uid);
+    if (success) setProjects(data);
   };
 
   const loadStats = async () => {
-    const { success, stats: projectStats } = await projectService.getProjectStats(currentUser.uid);
-    if (success) {
-      setStats(projectStats);
-    }
+    const { success, stats } = await projectService.getProjectStats(currentUser.uid);
+    if (success) setStats(stats);
   };
 
   const filterProjects = () => {
-    let filtered = [...projects];
-    
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(p => p.status === filterStatus);
-    }
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(query) ||
-        p.description?.toLowerCase().includes(query)
+    let f = [...projects];
+    if (filterStatus !== "all") f = f.filter(p => p.status === filterStatus);
+    if (searchQuery.trim())
+      f = f.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-    }
-    
-    setFilteredProjects(filtered);
+    setFilteredProjects(f);
   };
 
-  const handleOpenProject = async (project) => {
-    setActionLoading(true);
-    await projectService.updateLastAccessed(project.id);
-    setTimeout(() => {
-      setActionLoading(false);
-      onOpenProject(project);
-    }, 500);
+  const formatDate = (date) => {
+    const diff = Math.floor((new Date() - date) / (1000 * 60 * 60 * 24));
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Yesterday";
+    if (diff < 7) return `${diff} days ago`;
+    if (diff < 30) return `${Math.floor(diff / 7)} weeks ago`;
+    return date.toLocaleDateString();
   };
 
-  const handleDeleteProject = async (projectId) => {
-    setActionLoading(true);
-    const { success } = await projectService.deleteProject(projectId);
-    
-    if (success) {
-      setProjects(prev => prev.filter(p => p.id !== projectId));
-      setShowDeleteModal(false);
-      setSelectedProject(null);
-      loadStats();
-    }
-    setActionLoading(false);
-  };
-  
-  const handleDuplicateProject = async (projectId) => {
-    setActionLoading(true);
-    const { success } = await projectService.duplicateProject(projectId, currentUser.uid);
-    
-    if (success) {
-      await loadProjects();  // ✅ now only refresh, no flicker
-      await loadStats();
-    }
-    setActionLoading(false);
-  };
-  
-  const getProjectColor = (status) => {
-    switch (status) {
-      case 'completed': return 'border-green-500/40 hover:border-green-500/70 bg-green-500/5';
-      case 'in-progress': return 'border-blue-500/40 hover:border-blue-500/70 bg-blue-500/5';
-      default: return 'border-purple-500/40 hover:border-purple-500/70 bg-purple-500/5';
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const colors = {
-      draft: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-      'in-progress': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-      completed: 'bg-green-500/20 text-green-300 border-green-500/30'
+  const statusBadge = (status) => {
+    const map = {
+      draft: { label: "draft", color: "text-purple-300 bg-purple-500/10 border-purple-400" },
+      "in-progress": { label: "in progress", color: "text-blue-300 bg-blue-500/10 border-blue-400" },
+      completed: { label: "completed", color: "text-green-300 bg-green-500/10 border-green-400" }
     };
-    
-    const icons = {
-      draft: <Edit className="w-3 h-3" />,
-      'in-progress': <Loader className="w-3 h-3 animate-spin" />,
-      completed: <CheckCircle className="w-3 h-3" />
-    };
-    
+    const item = map[status];
+    if (!item) return null;
     return (
-      <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border ${colors[status] || colors.draft}`}>
-        {icons[status]}
-        {status.replace('-', ' ')}
+      <span className={`px-2 py-1 rounded-full text-xs border ${item.color}`}>
+        {item.label}
       </span>
     );
   };
 
-  const formatDate = (date) => {
-    if (!date) return 'Unknown';
-    
-    const now = new Date();
-    const diff = now - date;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-    return date.toLocaleDateString();
-  };
+  const progressColor = (v) =>
+    v >= 80 ? "bg-green-500" :
+    v >= 50 ? "bg-blue-500" :
+    v >= 30 ? "bg-yellow-500" : "bg-gray-500";
 
-  const getProgressColor = (progress) => {
-    if (progress >= 80) return 'bg-green-500';
-    if (progress >= 50) return 'bg-blue-500';
-    if (progress >= 30) return 'bg-yellow-500';
-    return 'bg-gray-500';
-  };
-
-  
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      {/* Header */}
-      <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                My Projects
-              </h1>
-              <p className="text-sm text-gray-400 mt-1">
-                Welcome back, {currentUser?.displayName || 'Developer'}
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#090b1a] via-[#0e1130] to-[#1a093b] text-white relative overflow-hidden">
+
+      {/* Glowing gradient blobs */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute top-[-200px] right-[-100px] w-[400px] h-[400px] bg-purple-600/15 blur-[160px]" />
+        <div className="absolute bottom-[-200px] left-[-100px] w-[400px] h-[400px] bg-cyan-500/15 blur-[160px]" />
+      </div>
+
+      {/* HEADER */}
+      <header className="sticky top-0 z-20 border-b border-white/10 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+              My Projects
+            </h1>
+            <p className="text-sm text-gray-400">
+              Welcome back, {currentUser?.displayName}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onNewProject}
+              className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 hover:to-pink-500 shadow-lg shadow-purple-600/30 font-semibold transition"
+            >
+              + New Workspace
+            </button>
+
+            <div className="relative">
               <button
-                onClick={onNewProject}
-                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/30"
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center font-bold"
               >
-                <Plus className="w-5 h-5" />
-                New Workspace
+                {currentUser?.displayName?.[0]}
               </button>
-              
-              <div className="relative">
-                <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold hover:from-purple-600 hover:to-blue-600 transition-all"
-                >
-                  {currentUser?.displayName?.charAt(0).toUpperCase() || 
-                   currentUser?.email?.charAt(0).toUpperCase() || 'U'}
-                </button>
-                
-                {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg border border-gray-700 shadow-xl">
+
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-3 w-80 rounded-2xl border border-gray-800 bg-gray-900 shadow-xl p-5 z-50">
+
+                    {/* Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-lg font-bold text-white">
+                        {currentUser?.displayName?.charAt(0).toUpperCase() ||
+                        currentUser?.email?.charAt(0).toUpperCase()}
+                    </div>
+
+                    <div>
+                        <h2 className="font-semibold text-white text-lg">
+                        {currentUser?.displayName}
+                        </h2>
+                        <p className="text-xs text-gray-400">
+                        Member since{" "}
+                        {currentUser?.metadata?.creationTime
+                            ? new Date(currentUser.metadata.creationTime).toLocaleDateString()
+                            : ""}
+                        </p>
+                    </div>
+                    </div>
+
+                    {/* User Info */}
+                    <div className="space-y-3">
+
+                    <div className="bg-gray-800 border border-gray-700 p-3 rounded-xl text-sm">
+                        <p className="text-xs text-gray-400">Display Name</p>
+                        <p className="text-white font-medium">{currentUser?.displayName}</p>
+                    </div>
+
+                    <div className="bg-gray-800 border border-gray-700 p-3 rounded-xl text-sm">
+                        <p className="text-xs text-gray-400">Email Address</p>
+                        <p className="text-white font-medium">{currentUser?.email}</p>
+                    </div>
+
+                    <div className="bg-gray-800 border border-gray-700 p-3 rounded-xl text-sm">
+                        <p className="text-xs text-gray-400">Email Verification</p>
+                        <p className={`font-medium flex items-center gap-2 ${
+                        currentUser?.emailVerified ? "text-green-400" : "text-yellow-400"
+                        }`}>
+                        <span className={`w-2 h-2 rounded-full ${
+                            currentUser?.emailVerified ? "bg-green-400" : "bg-yellow-400"
+                        }`}></span>
+                        {currentUser?.emailVerified ? "Verified" : "Not Verified"}
+                        </p>
+                    </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-[1px] bg-gray-700 my-4" />
+
+                    {/* Sign Out */}
                     <button
-                      onClick={onLogout}
-                      className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
+                    onClick={onLogout}
+                    className="w-full py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition flex items-center justify-center gap-2"
                     >
-                      Sign Out
+                    <span className="text-lg">↳</span> Sign Out
                     </button>
-                  </div>
+                </div>
                 )}
-              </div>
+
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Stats Cards */}
+      {/* CONTENT */}
+      <div className="max-w-7xl mx-auto px-6 py-10">
+
+        {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-900 rounded-xl p-6 border border-purple-500/20 hover:border-purple-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400 text-sm">Total Projects</span>
-                <Folder className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="text-3xl font-bold text-white">{stats.totalProjects}</div>
-              <div className="text-xs text-gray-500 mt-1">{stats.totalFiles} files total</div>
-            </div>
-            
-            <div className="bg-gray-900 rounded-xl p-6 border border-blue-500/20 hover:border-blue-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400 text-sm">In Progress</span>
-                <TrendingUp className="w-5 h-5 text-blue-400" />
-              </div>
-              <div className="text-3xl font-bold text-white">{stats.inProgressProjects}</div>
-              <div className="text-xs text-gray-500 mt-1">Active development</div>
-            </div>
-            
-            <div className="bg-gray-900 rounded-xl p-6 border border-green-500/20 hover:border-green-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400 text-sm">Completed</span>
-                <CheckCircle className="w-5 h-5 text-green-400" />
-              </div>
-              <div className="text-3xl font-bold text-white">{stats.completedProjects}</div>
-              <div className="text-xs text-gray-500 mt-1">Ready to deploy</div>
-            </div>
-            
-            <div className="bg-gray-900 rounded-xl p-6 border border-cyan-500/20 hover:border-cyan-500/40 transition-all">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-400 text-sm">Lines of Code</span>
-                <Code className="w-5 h-5 text-cyan-400" />
-              </div>
-              <div className="text-3xl font-bold text-white">{stats.totalLines?.toLocaleString()}</div>
-              <div className="text-xs text-gray-500 mt-1">Total written</div>
-            </div>
-          </div>
-        )}
-
-        {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search projects..."
-              className="w-full pl-10 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="all">All Status</option>
-              <option value="draft">Draft</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-            
-            <button
-              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              className="px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              {viewMode === 'grid' ? <List className="w-5 h-5" /> : <Grid className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Projects Grid */}
-        {filteredProjects.length === 0 ? (
-          <div className="text-center py-20">
-            <Folder className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">
-              {searchQuery || filterStatus !== 'all' ? 'No projects found' : 'No projects yet'}
-            </h3>
-            <p className="text-gray-500 mb-6">
-              {searchQuery || filterStatus !== 'all' 
-                ? 'Try adjusting your search or filters' 
-                : 'Create your first project to get started'}
-            </p>
-            {!searchQuery && filterStatus === 'all' && (
-              <button
-                onClick={onNewProject}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+            {[
+              { label: "Total Projects", v: stats.totalProjects, icon: Folder },
+              { label: "In Progress", v: stats.inProgressProjects, icon: TrendingUp },
+              { label: "Completed", v: stats.completedProjects, icon: CheckCircle },
+              { label: "Lines of Code", v: stats.totalLines.toLocaleString(), icon: Code },
+            ].map((s, i) => (
+              <div key={i}
+                className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md hover:border-purple-400/40 transition shadow-xl shadow-black/20"
               >
-                <Plus className="w-5 h-5" />
-                Create First Project
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className={viewMode === 'grid' 
-            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' 
-            : 'space-y-4'
-          }>
-            {filteredProjects.map((project) => (
-              <div
-                key={project.id}
-                className={`bg-gray-900 rounded-xl border-2 ${getProjectColor(project.status)} transition-all cursor-pointer group relative overflow-hidden ${
-                  viewMode === 'list' ? 'p-4' : 'p-6'
-                }`}
-                onClick={() => handleOpenProject(project)}
-              >
-                {/* Hover Gradient Effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-pink-500/0 group-hover:from-purple-500/10 group-hover:to-pink-500/10 transition-all duration-300"></div>
-                
-                <div className="relative z-10">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">
-                          {project.name}
-                        </h3>
-                        {project.progress === 100 && (
-                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-400 line-clamp-2 mb-3">
-                        {project.description || 'No description'}
-                      </p>
-                    </div>
-                    
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedProject(selectedProject === project.id ? null : project.id);
-                        }}
-                        className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                      
-                      {selectedProject === project.id && (
-                        <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg border border-gray-700 shadow-xl z-20">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDuplicateProject(project.id);
-                              setSelectedProject(null);
-                            }}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-t-lg transition-colors"
-                          >
-                            <Copy className="w-4 h-4" />
-                            Duplicate
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowDeleteModal(true);
-                              setSelectedProject(project.id);
-                            }}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-gray-700 rounded-b-lg transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                      <span>Progress</span>
-                      <span>{project.progress}%</span>
-                    </div>
-                    <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full ${getProgressColor(project.progress)} transition-all duration-500`}
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Tech Stack Tags */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {project.techStack?.frontend?.slice(0, 3).map((tech, idx) => (
-                      <span 
-                        key={idx}
-                        className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30"
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Footer */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-800">
-                    <div className="flex items-center gap-4 text-xs text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <FileText className="w-3 h-3" />
-                        {project.filesCount} files
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Code className="w-3 h-3" />
-                        {project.linesOfCode?.toLocaleString()} LOC
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(project.status)}
-                    </div>
-                  </div>
-
-                  {/* Last Modified */}
-                  <div className="flex items-center gap-1 text-xs text-gray-500 mt-2">
-                    <Clock className="w-3 h-3" />
-                    {formatDate(project.lastAccessedAt)}
-                  </div>
+                <div className="flex justify-between mb-2 text-gray-300">
+                  <span>{s.label}</span>
+                  <s.icon className="text-cyan-400" />
                 </div>
+                <div className="text-3xl font-bold">{s.v}</div>
               </div>
             ))}
           </div>
         )}
-      </div>
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border-2 border-red-500/30 mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Delete Project?</h3>
-                <p className="text-sm text-gray-400">This action cannot be undone</p>
-              </div>
-            </div>
-            <p className="text-gray-400 mb-6">
-              The project and all its files will be permanently deleted from your workspace.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setSelectedProject(null);
-                }}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteProject(selectedProject)}
-                disabled={actionLoading}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {actionLoading ? (
-                  <>
-                    <Loader className="w-4 h-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
+        {/* Search + view switch */}
+        <div className="flex gap-4 mb-8">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              className="w-full bg-white/5 border border-white/10 rounded-lg pl-10 pr-4 py-3 placeholder-gray-400 backdrop-blur text-white focus:ring-2 focus:ring-purple-500"
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            className="px-4 rounded-lg bg-white/5 border border-white/10 hover:border-purple-400/40 transition"
+            onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+          >
+            {viewMode === "grid" ? <List /> : <Grid />}
+          </button>
+        </div>
+
+        {/* PROJECT GRID */}
+        <div className={viewMode === "grid"
+          ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          : "space-y-6"
+        }>
+          {filteredProjects.map(p => (
+            <div
+              key={p.id}
+              className="p-6 rounded-xl bg-white/5 border border-white/10 backdrop-blur-lg hover:border-purple-400/40 hover:shadow-lg hover:shadow-purple-500/30 transition cursor-pointer group"
+              onClick={() => onOpenProject(p)}
+            >
+              {/* Title + menu */}
+              <div className="flex justify-between mb-3">
+                <h3 className="text-lg font-semibold group-hover:text-purple-300 transition">
+                  {p.name}
+                </h3>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedProject(selectedProject === p.id ? null : p.id);
+                  }}
+                  className="p-1 hover:bg-white/10 rounded"
+                >
+                  <MoreVertical className="w-4 h-4 text-gray-300" />
+                </button>
+
+                {selectedProject === p.id && (
+                  <div className="absolute right-4 bg-black/70 border border-white/10 rounded-xl backdrop-blur-xl shadow-xl">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); 
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/10 w-full"
+                    >
+                      <Copy className="w-4 h-4" /> Duplicate
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDeleteModal(true);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-white/10 w-full"
+                    >
+                      <Trash2 className="w-4 h-4" /> Delete
+                    </button>
+                  </div>
                 )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
 
-      {/* Action Loading Overlay */}
-      {actionLoading && !showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-2xl p-8 border-2 border-purple-500/30">
-            <Loader className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-4" />
-            <p className="text-white text-center">Processing...</p>
-          </div>
+              {/* Description */}
+              <p className="text-sm text-gray-400 mb-4">{p.description}</p>
+
+              {/* Progress */}
+              <div className="mb-4">
+                <div className="text-xs text-gray-400 mb-1 flex justify-between">
+                  <span>Progress</span><span>{p.progress}%</span>
+                </div>
+                <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${progressColor(p.progress)} transition`}
+                    style={{ width: `${p.progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Tech tags */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {p.techStack.frontend?.slice(0, 3).map((t, i) => (
+                  <span
+                    key={i}
+                    className="text-xs px-2 py-1 rounded border border-purple-400/30 text-purple-300 bg-purple-500/10"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+
+              {/* Footer */}
+              <div className="flex justify-between text-xs text-gray-400">
+                <span className="flex items-center gap-1">
+                  <FileText className="w-3 h-3" /> {p.filesCount} files
+                </span>
+                <span className="flex items-center gap-1">
+                  <Code className="w-3 h-3" /> {p.linesOfCode.toLocaleString()} LOC
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> {formatDate(p.lastAccessedAt)}
+                </span>
+
+                <div className="flex gap-2 items-center">
+                  {statusBadge(p.status)}
+                  {p.progress === 100 && (
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  )}
+                </div>
+              </div>
+
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };
