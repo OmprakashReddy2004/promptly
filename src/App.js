@@ -13,6 +13,7 @@ import TestingAgentViewer from './components/TestingAgentViewer';
 import { CheckCircle } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import { createProject, getProject, updateProject } from './services/projectService';
+import PromptView from './components/PromptView';
 
 //ADD YOUR GEMINI API KEY HERE
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'your-gemini-api-key-here';
@@ -537,7 +538,7 @@ function AppContent() {
   const { currentUser, isAuthenticated, authLoading, error: authError, setError: setAuthError } = useAuth();
 
   // ===== UI STATE HOOKS =====
-  const [currentView, setCurrentView] = useState('prompt');
+  const [currentView, setCurrentView] = useState('dashboard');
   const [prompt, setPrompt] = useState('');
   const [ideation, setIdeation] = useState(null);
   const [generatedFiles, setGeneratedFiles] = useState(null);
@@ -1913,55 +1914,38 @@ export default App;`;
 // Continue with other helper functions...
 // (generateComponents, generatePages, etc. - would you like me to continue with these?)
 
-  const handleGenerateIdeation = async () => {
-    if (!prompt.trim()) {
-      alert('Please enter a prompt!');
-      return;
-    }
+const handleGenerateIdeation = async (userPrompt) => {
+  if (!userPrompt.trim()) {
+    alert('Please enter a prompt!');
+    return;
+  }
 
-    if (GEMINI_API_KEY === 'your-gemini-api-key-here') {
-      alert('Please add your Gemini API key in the REACT_APP_GEMINI_API_KEY environment variable!');
-      return;
-    }
+  setPrompt(userPrompt); // store the prompt
 
-    setCurrentView('transition-to-ideation');
-    
-    const ideationData = await generateIdeation(prompt);
-    if (ideationData) {
-      setIdeation(ideationData);
-      setCurrentView('ideation');
-      setShowIdeation(false);
+  if (GEMINI_API_KEY === 'your-gemini-api-key-here') {
+    alert('Please add your Gemini API key in the REACT_APP_GEMINI_API_KEY environment variable!');
+    return;
+  }
 
-      if (!currentProject) {
-        const { success, projectId } = await createProject(currentUser.uid, {
-          name: ideationData.projectName,
-          description: ideationData.description,
-          ideation: ideationData,
-          techStack: ideationData.techStack,
-          status: 'draft'
-        });
-        
-        if (success) {
-          setCurrentProject({ id: projectId });
-        }
-      }
-      
-      setCurrentView('ideation');
-      
-      setTimeout(() => {
-        setShowIdeation(true);
-        ideationData.features.forEach((_, idx) => {
-          setTimeout(() => {
-            setAnimateFeatures(prev => [...prev, idx]);
-          }, idx * 150);
-        });
-      }, 300);
-    } else {
-      setCurrentView('prompt');
-    }
+  // Show loading animation
+  setCurrentView("transition-to-ideation");
 
+  const ideationData = await generateIdeation(userPrompt);
 
-  };
+  if (!ideationData) {
+    setCurrentView("prompt");
+    return;
+  }
+
+  // ✅ go to ideation, NOT editor
+  setIdeation(ideationData);
+setTimeout(() => {
+  setCurrentView("ideation");
+  setTimeout(() => setShowIdeation(true), 150); // ✅ trigger fade-in animation
+}, 900);
+
+};
+
 
   const handlePrototype = async () => {
     setCurrentView('loading');
@@ -2154,6 +2138,7 @@ if (currentView === 'dashboard') {
       setViewTransitionLoading(true);
       setTimeout(() => {
         setCurrentView('prompt');
+        setShowIdeation(false); // Reset
         setCurrentProject(null);
         setPrompt('');
         setIdeation(null);
@@ -2182,7 +2167,16 @@ if (currentView === 'dashboard') {
       
           setViewTransitionLoading(false);
         }, 800);
-      }}      
+      }}    
+      onNewWorkspace={() => {
+        setViewTransitionLoading(true);
+        setShowIdeation(false);
+
+        setTimeout(() => {
+          setCurrentView('prompt');
+          setViewTransitionLoading(false);
+        }, 800); // nice fade feel
+    }}  
       onLogout={handleLogout}
     />
   );
@@ -2226,190 +2220,17 @@ if (currentView === 'dashboard') {
   // Prompt View
   if (currentView === 'prompt') {
     return (
-      <div className="h-screen bg-gray-950 p-6 pr-12 relative overflow-hidden flex flex-col">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(139,92,246,0.15),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(236,72,153,0.15),transparent_50%)]"></div>
-        
-        <div className="max-w-[1600px] mx-auto w-full relative z-10 flex flex-col justify-center h-full">
-          <div className="absolute top-0 right-0 p-4">
-            <div className="flex items-center gap-4">
-              <span className="text-gray-300 text-sm">
-                Welcome back, {currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User'}
-              </span>
-              <button
-                onClick={() => setShowUserProfile(!showUserProfile)}
-                className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm hover:from-purple-600 hover:to-blue-600 transition-all"
-              >
-                {currentUser?.displayName 
-                  ? currentUser.displayName.charAt(0).toUpperCase()
-                  : currentUser?.email?.charAt(0).toUpperCase() || 'U'
-                }
-              </button>
-              {showUserProfile && (
-                <div className="absolute top-16 right-0 w-80">
-                  <UserProfile onLogout={handleLogout} />
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-cyan-300 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Hello, {currentUser?.displayName || 'User'}, Welcome Back
-            </h1>
-            <p className="text-gray-400 text-base">
-              Let's build the future, one component at a time. What are we creating today?
-            </p>
-          </div>
-
-          {(error || authError) && (
-            <div className="bg-red-950/50 border-2 border-red-500 text-red-300 px-4 py-2 rounded-lg mb-6 max-w-2xl mx-auto shadow-lg shadow-red-500/20">
-              {error || authError}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 items-center">
-            <div className="lg:col-span-3 flex flex-col justify-center max-w-lg mx-auto w-full">
-              <div className="bg-gray-900/80 rounded-xl p-6 border-2 border-gray-700/40 hover:border-gray-600/60 transition-all shadow-lg">
-                <h2 className="text-lg font-semibold text-white mb-1">Prototype an app with AI</h2>
-                <p className="text-gray-400 text-xs mb-4">Describe your app idea, and let our AI bring it to life.</p>
-                
-                <textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="An app that helps me plan my day..."
-                  className="w-full h-24 p-2 border-2 border-purple-500/40 bg-gray-800/50 rounded-lg focus:border-purple-400 focus:outline-none focus:shadow-lg focus:shadow-purple-500/20 resize-none text-gray-100 placeholder-gray-600 mb-4 transition-all duration-300"
-                  disabled={loading}
-                />
-
-                <button 
-                  onClick={handleGenerateIdeation}
-                  disabled={loading}
-                  className="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-900 py-2.5 px-4 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30 hover:shadow-cyan-400/50 border-2 border-cyan-400 mb-3"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-900 border-t-transparent"></div>
-                      Generating Proposal...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={16} />
-                      Generate Proposal
-                    </>
-                  )}
-                </button>
-
-                <div className="text-center my-3">
-                  <span className="text-gray-500 text-xs uppercase font-semibold">or</span>
-                </div>
-
-                <button 
-                  className="w-full bg-transparent hover:bg-gray-800/50 text-gray-300 hover:text-white py-2.5 px-4 rounded-lg font-semibold transition-all border-2 border-gray-700 hover:border-pink-500/50 flex items-center justify-center gap-2 hover:shadow-lg hover:shadow-pink-500/20"
-                >
-                  <Lightbulb size={16} />
-                  Sample Prompts
-                </button>
-              </div>
-            </div>
-
-            <div className="lg:col-span-4 flex flex-col min-h-0 bg-gray-900/80 rounded-xl p-6 border-2 border-gray-700/40 hover:border-gray-600/60 transition-all shadow-lg" style={{ maxHeight: '500px' }}>
-              <h2 className="text-xl font-bold text-white mb-1">My Projects</h2>
-              <p className="text-gray-400 text-sm mb-4">Your collection of AI-generated prototypes.</p>
-              
-              <div className="grid grid-cols-2 gap-3 overflow-y-auto" style={{ maxHeight: '400px' }}>
-                <div className="bg-gray-900/80 rounded-lg p-4 border-2 border-purple-500/40 hover:border-purple-400/70 transition-all cursor-pointer group shadow-lg shadow-purple-500/10 hover:shadow-purple-500/30 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-base font-semibold text-white group-hover:text-purple-300 transition-colors">
-                        Daily Planner AI
-                      </h3>
-                      <button className="text-gray-500 hover:text-purple-400 opacity-0 group-hover:opacity-100 transition-all">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="text-xs font-mono text-gray-500 mb-2">PROJ-001</div>
-                  </div>
-                  <div className="text-xs text-gray-400">Last accessed: 2 days ago</div>
-                </div>
-
-                <div className="bg-gray-900/80 rounded-lg p-4 border-2 border-pink-500/40 hover:border-pink-400/70 transition-all cursor-pointer group shadow-lg shadow-pink-500/10 hover:shadow-pink-500/30 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-base font-semibold text-white group-hover:text-pink-300 transition-colors">
-                        Fitness Tracker
-                      </h3>
-                      <button className="text-gray-500 hover:text-pink-400 opacity-0 group-hover:opacity-100 transition-all">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="text-xs font-mono text-gray-500 mb-2">PROJ-007</div>
-                  </div>
-                  <div className="text-xs text-gray-400">Last accessed: 5 days ago</div>
-                </div>
-
-                <div className="bg-gray-900/80 rounded-lg p-4 border-2 border-cyan-500/40 hover:border-cyan-400/70 transition-all cursor-pointer group shadow-lg shadow-cyan-500/10 hover:shadow-cyan-500/30 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-base font-semibold text-white group-hover:text-cyan-300 transition-colors">
-                        Recipe Recommender
-                      </h3>
-                      <button className="text-gray-500 hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-all">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="text-xs font-mono text-gray-500 mb-2">PROJ-003</div>
-                  </div>
-                  <div className="text-xs text-gray-400">Last accessed: 1 week ago</div>
-                </div>
-
-                <div className="bg-gray-900/80 rounded-lg p-4 border-2 border-green-500/40 hover:border-green-400/70 transition-all cursor-pointer group shadow-lg shadow-green-500/10 hover:shadow-green-500/30 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="text-base font-semibold text-white group-hover:text-green-300 transition-colors">
-                        Portfolio Website V2
-                      </h3>
-                      <button className="text-gray-500 hover:text-green-400 opacity-0 group-hover:opacity-100 transition-all">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                        </svg>
-                      </button>
-                    </div>
-                    <div className="text-xs font-mono text-gray-500 mb-2">PROJ-012</div>
-                  </div>
-                  <div className="text-xs text-gray-400">Last accessed: 2 weeks ago</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-4 mt-12">
-            <button className="flex items-center gap-2 px-5 py-2 bg-transparent hover:bg-gray-900/50 text-cyan-400 rounded-lg font-medium transition-all border-2 border-gray-800 hover:border-cyan-500/50 hover:shadow-lg hover:shadow-cyan-500/20">
-              <ArrowRight size={16} />
-              Import Repo
-            </button>
-            <button className="flex items-center gap-2 px-5 py-2 bg-transparent hover:bg-gray-900/50 text-gray-300 hover:text-white rounded-lg font-medium transition-all border-2 border-gray-800 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/20">
-              <Box size={16} />
-              New Workspace
-            </button>
-          </div>
-
-          <p className="text-center text-xs text-gray-600 mt-4">
-            Powered by Google Gemini 1.5 Flash
-          </p>
-        </div>
-
-        <div className="absolute bottom-12 right-12 w-32 h-32 bg-purple-600/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-20 left-20 w-24 h-24 bg-cyan-600/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-      </div>
+      <PromptView
+        onGenerateIdeation={handleGenerateIdeation}
+        loading={loading}
+        error={error}
+        onBack={() => setCurrentView('dashboard')}
+      />
     );
   }
+  
+  
+  
 
   // Transition to Ideation
   if (currentView === 'transition-to-ideation') {
