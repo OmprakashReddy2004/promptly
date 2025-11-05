@@ -60,11 +60,11 @@ const VSCodeFileExplorer = ({ generatedFiles }) => {
 
   // Configure Monaco loader
   useEffect(() => {
-    loader.config({ 
-      paths: { 
-        vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs' 
-      } 
-    });
+    loader.config({
+      paths: {
+        vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs'
+      }
+    });    
   }, []);
 
   // Check backend connection
