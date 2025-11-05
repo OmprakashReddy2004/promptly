@@ -8,6 +8,9 @@ import ErrorDisplay from './components/ErrorDisplay';
 import DocumentationViewer from './components/DocumentationViewer';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useDocumentationAgent, DocumentationModal } from './hooks/useDocumentationAgent';
+import { useTestingAgent, TestingModal } from './hooks/useTestingAgent';
+import TestingAgentViewer from './components/TestingAgentViewer';
+import { CheckCircle } from 'lucide-react';
 
 //ADD YOUR GEMINI API KEY HERE
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'your-gemini-api-key-here';
@@ -551,6 +554,19 @@ function AppContent() {
     isGenerating, 
     documentationProgress 
   } = useDocumentationAgent();
+
+  // Testing Agent States
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [showTestViewer, setShowTestViewer] = useState(false);
+  const [testSuite, setTestSuite] = useState(null);
+  const [codeQuality, setCodeQuality] = useState(null);
+  const { 
+    generateTestSuite, 
+    analyzeCodebase,
+    addTestsToFileStructure, 
+    isGenerating: isGeneratingTests, 
+    testProgress 
+  } = useTestingAgent();
 
   // ============================================================================
   // ENHANCED GENERATE IDEATION WITH ROBUST PARSING
@@ -1985,6 +2001,48 @@ export default App;`;
     setLoading(false);
   };
 
+  const handleGenerateTests = async () => {
+    if (!generatedFiles) {
+      alert('Please generate code first!');
+      return;
+    }
+  
+    try {
+      setShowTestModal(true);
+      
+      // Generate tests
+      const tests = await generateTestSuite(generatedFiles);
+      
+      // Analyze code quality
+      const quality = await analyzeCodebase(generatedFiles);
+      
+      if (tests.success) {
+        setTestSuite(tests);
+        setCodeQuality(quality);
+        
+        // Add tests to file structure
+        const filesWithTests = addTestsToFileStructure(generatedFiles, tests);
+        setGeneratedFiles(filesWithTests);
+        
+        setShowTestModal(false);
+        setShowTestViewer(true);
+      } else {
+        alert('Test generation failed: ' + (tests.error || tests.message));
+        setShowTestModal(false);
+      }
+    } catch (error) {
+      console.error('Test generation failed:', error);
+      alert('Failed to generate tests. Please try again.');
+      setShowTestModal(false);
+    }
+  };
+  
+  const handleViewTests = () => {
+    if (testSuite) {
+      setShowTestViewer(true);
+    }
+  };
+
   const handleLoginSuccess = (user) => {
     console.log('Login successful:', user);
     setCurrentView('prompt');
@@ -2557,6 +2615,17 @@ export default App;`;
               <FileText size={16} />
               {isGenerating ? 'Generating...' : 'Update Docs'}
             </button>
+
+            {/* Generate Tests Button */}
+            <button
+              onClick={handleGenerateTests}
+              disabled={isGeneratingTests}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+              title="Generate Tests"
+            >
+              <CheckCircle size={16} />
+              {isGeneratingTests ? 'Generating...' : 'Generate Tests'}
+            </button>
           </div>
           <button
             onClick={handleStartOver}
@@ -2580,6 +2649,27 @@ export default App;`;
             documentation={generatedDocs}
             projectName={ideation?.projectName || 'Project'}
             onClose={() => setShowDocsViewer(false)}
+          />
+        )}
+
+        {/* Testing Agent Modal */}
+        <TestingModal 
+          isOpen={showTestModal}
+          onClose={() => setShowTestModal(false)}
+          progress={testProgress}
+          results={testSuite}
+        />
+
+        {/* Testing Agent Viewer */}
+        {showTestViewer && (
+          <TestingAgentViewer
+            testResults={testSuite}
+            codeQuality={codeQuality}
+            onClose={() => setShowTestViewer(false)}
+            onRunTests={() => {
+              console.log('Running tests...');
+              // Add test execution logic here
+            }}
           />
         )}
       </div>
