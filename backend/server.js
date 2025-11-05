@@ -1,12 +1,21 @@
+// ================================================================
+// 🧠 AI-Powered VSCode Backend (with Docs + Test Generation)
+// ================================================================
+
 const express = require('express');
 const cors = require('cors');
 const { spawn } = require('child_process');
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
+require('dotenv').config();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 const app = express();
 const PORT = 5001;
+
+// Gemini AI setup
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Middleware
 app.use(cors());
@@ -30,7 +39,55 @@ const initWorkspace = async () => {
 
 initWorkspace();
 
-// Execute command endpoint with STABLE error handling
+// ================================================================
+// 💻 Helper functions
+// ================================================================
+
+// Recursively get all code files
+const getAllFiles = async (dirPath) => {
+  const entries = await fs.readdir(dirPath, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      const nested = await getAllFiles(fullPath);
+      files.push(...nested);
+    } else if (entry.isFile()) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+};
+
+// Combine code files into single string
+const serializeWorkspace = async () => {
+  const allFiles = await getAllFiles(WORKSPACE_DIR);
+  let combined = '';
+
+  for (const file of allFiles) {
+    if (file.match(/\.(js|jsx|java|py|ts|tsx|html|css)$/)) {
+      const content = await fs.readFile(file, 'utf-8');
+      combined += `\n\n// ===== ${path.relative(WORKSPACE_DIR, file)} =====\n${content}`;
+    }
+  }
+
+  return combined;
+};
+
+// Generate text using Gemini API
+const generateText = async (prompt) => {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+};
+
+// ================================================================
+// ⚙️ Terminal Execution Routes (Original Logic)
+// ================================================================
+
+// Execute command endpoint
 app.post('/api/execute', async (req, res) => {
   const { command, cwd = '.', sessionId } = req.body;
 
@@ -40,7 +97,6 @@ app.post('/api/execute', async (req, res) => {
 
   console.log(`📝 Executing: ${command}`);
 
-  // Determine shell based on OS
   const shell = os.platform() === 'win32' ? 'cmd.exe' : '/bin/bash';
   const shellArgs = os.platform() === 'win32' ? ['/c', command] : ['-c', command];
 
@@ -48,127 +104,198 @@ app.post('/api/execute', async (req, res) => {
   let timeoutHandle = null;
 
   try {
-    // Resolve working directory
     const workingDir = path.resolve(WORKSPACE_DIR, cwd);
-    
-    // Check if directory exists
     try {
       await fs.access(workingDir);
     } catch {
-      return res.status(400).json({ 
-        success: false,
-        error: `Directory does not exist: ${workingDir}` 
-      });
+      return res.status(400).json({ success: false, error: `Directory does not exist: ${workingDir}` });
     }
 
     const childProcess = spawn(shell, shellArgs, {
       cwd: workingDir,
       env: { ...process.env, FORCE_COLOR: '1' },
-      timeout: 30000 // Built-in timeout
+      timeout: 30000
     });
 
     let output = '';
     let errorOutput = '';
 
-    // Collect stdout
-    childProcess.stdout.on('data', (data) => {
-      output += data.toString();
-    });
+    childProcess.stdout.on('data', (data) => (output += data.toString()));
+    childProcess.stderr.on('data', (data) => (errorOutput += data.toString()));
 
-    // Collect stderr
-    childProcess.stderr.on('data', (data) => {
-      errorOutput += data.toString();
-    });
-
-    // Handle process completion
     childProcess.on('close', (code) => {
       if (responseSent) return;
       responseSent = true;
-      
       if (timeoutHandle) clearTimeout(timeoutHandle);
 
       const finalOutput = output || errorOutput || '(command completed successfully)';
-      
       console.log(`✅ Command finished with code: ${code}`);
-      
-      res.json({
-        success: code === 0,
-        output: finalOutput,
-        exitCode: code
-      });
+
+      res.json({ success: code === 0, output: finalOutput, exitCode: code });
     });
 
-    // Handle process errors
     childProcess.on('error', (err) => {
       if (responseSent) return;
       responseSent = true;
-      
       if (timeoutHandle) clearTimeout(timeoutHandle);
-      
       console.error(`❌ Process error: ${err.message}`);
-      
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        output: ''
-      });
+      res.status(500).json({ success: false, error: err.message, output: '' });
     });
 
-    // Store process if it's a long-running command
     if (sessionId) {
       activeProcesses.set(sessionId, childProcess);
     }
 
-    // Backup timeout (in case built-in doesn't work)
     timeoutHandle = setTimeout(() => {
       if (responseSent) return;
       responseSent = true;
-
       console.warn('⏱️  Command timeout');
-
-      if (!childProcess.killed) {
-        childProcess.kill('SIGTERM');
-        
-        // Force kill if still running after 2 seconds
-        setTimeout(() => {
-          if (!childProcess.killed) {
-            childProcess.kill('SIGKILL');
-          }
-        }, 2000);
-      }
-
+      if (!childProcess.killed) childProcess.kill('SIGTERM');
       res.json({
         success: false,
         output: (output || errorOutput) + '\n⏱️  [Process timeout - killed after 30s]',
         exitCode: -1
       });
-    }, 31000); // Slightly longer than spawn timeout
-
+    }, 31000);
   } catch (err) {
     if (responseSent) return;
     responseSent = true;
-    
     console.error(`❌ Execution error: ${err.message}`);
-    
-    res.status(500).json({
-      success: false,
-      error: err.message,
-      output: ''
-    });
+    res.status(500).json({ success: false, error: err.message, output: '' });
   }
 });
 
-// Read file endpoint
+// ================================================================
+// 🧠 AI-Powered Documentation Generation
+// ================================================================
+app.post('/api/generateDocs', async (req, res) => {
+  try {
+    console.log('📘 Generating documentation using Gemini...');
+    const combinedCode = await serializeWorkspace();
+
+    if (!combinedCode.trim()) {
+      return res.status(400).json({ success: false, error: 'No code files found in workspace' });
+    }
+
+    const prompt = `
+You are an expert software documentation generator.
+Analyze the following project source code and return documentation as a valid **JSON** object ONLY.
+Follow this exact JSON format (no prose, no markdown outside JSON):
+
+{
+  "readme": "Project overview and architecture",
+  "apiDocs": "All API endpoints and functions with examples",
+  "componentDocs": "React components, hooks, or modules explained",
+  "setupGuide": "Installation, environment setup, and run instructions",
+  "changelog": "Notable features or major changes in structure"
+}
+
+Do not include backticks or explanations — return raw JSON only.
+
+Code:
+${combinedCode}
+`;
+
+    const responseText = await generateText(prompt);
+    let documentation;
+
+    try {
+      documentation = JSON.parse(responseText);
+    } catch {
+      documentation = { readme: responseText };
+    }
+
+    console.log('✅ Documentation generated successfully');
+    res.json({ success: true, documentation });
+  } catch (error) {
+    console.error('❌ Error generating documentation:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ================================================================
+// 🧪 AI-Powered Test Generation + Code Quality
+// ================================================================
+app.post('/api/generateTests', async (req, res) => {
+  try {
+    console.log('🧪 Generating test cases using Gemini...');
+    const combinedCode = await serializeWorkspace();
+
+    if (!combinedCode.trim()) {
+      return res.status(400).json({ success: false, error: 'No code files found in workspace' });
+    }
+
+    const prompt = `
+You are an experienced test engineer and code reviewer.
+Analyze the following project code and produce a **valid JSON** object ONLY (no prose, no markdown).
+Follow this schema exactly:
+
+{
+  "testResults": {
+    "summary": {
+      "totalTests": number,
+      "components": number,
+      "utilities": number,
+      "hooks": number
+    },
+    "tests": {
+      "filePath": {
+        "name": "string",
+        "content": "string"
+      }
+    },
+    "config": {
+      "jest.config.js": "string",
+      "package.json.additions": { "dependencies": ["jest", "@testing-library/react"] }
+    }
+  },
+  "codeQuality": {
+    "metrics": {
+      "codeQuality": number,
+      "totalFiles": number,
+      "totalLines": number
+    },
+    "issues": [
+      { "severity": "error" | "warning", "message": "string", "file": "string" }
+    ]
+  }
+}
+
+Return only raw JSON — do not include markdown fences or explanations.
+
+Code:
+${combinedCode}
+`;
+
+    let responseText = await generateText(prompt);
+    responseText = responseText.trim();
+    responseText = responseText.replace(/^```json|```$/g, '').trim();
+
+    let testSuite;
+    try {
+      testSuite = JSON.parse(responseText);
+    } catch (err) {
+      console.warn('⚠️ Could not parse JSON. Fallback to raw text.');
+      testSuite = { raw: responseText };
+    }
+
+    console.log('✅ Tests and code quality generated successfully');
+    res.json({ success: true, testSuite });
+  } catch (error) {
+    console.error('❌ Error generating tests:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ================================================================
+// 📁 File Management Routes
+// ================================================================
+
 app.post('/api/readFile', async (req, res) => {
   const { filePath } = req.body;
-  
   try {
     const fullPath = path.resolve(WORKSPACE_DIR, filePath);
-    
-    if (!fullPath.startsWith(WORKSPACE_DIR)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    
+    if (!fullPath.startsWith(WORKSPACE_DIR)) return res.status(403).json({ error: 'Access denied' });
     const content = await fs.readFile(fullPath, 'utf-8');
     res.json({ success: true, content });
   } catch (error) {
@@ -176,60 +303,37 @@ app.post('/api/readFile', async (req, res) => {
   }
 });
 
-// Write file endpoint
 app.post('/api/writeFile', async (req, res) => {
   const { filePath, content } = req.body;
-  
   try {
     const fullPath = path.resolve(WORKSPACE_DIR, filePath);
-    
-    if (!fullPath.startsWith(WORKSPACE_DIR)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    
+    if (!fullPath.startsWith(WORKSPACE_DIR)) return res.status(403).json({ error: 'Access denied' });
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, 'utf-8');
-    
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// List directory endpoint
 app.post('/api/listDir', async (req, res) => {
   const { dirPath = '.' } = req.body;
-  
   try {
     const fullPath = path.resolve(WORKSPACE_DIR, dirPath);
-    
-    if (!fullPath.startsWith(WORKSPACE_DIR)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    
+    if (!fullPath.startsWith(WORKSPACE_DIR)) return res.status(403).json({ error: 'Access denied' });
     const files = await fs.readdir(fullPath, { withFileTypes: true });
-    const fileList = files.map(file => ({
-      name: file.name,
-      isDirectory: file.isDirectory()
-    }));
-    
+    const fileList = files.map(file => ({ name: file.name, isDirectory: file.isDirectory() }));
     res.json({ success: true, files: fileList });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Create directory endpoint
 app.post('/api/createDir', async (req, res) => {
   const { dirPath } = req.body;
-  
   try {
     const fullPath = path.resolve(WORKSPACE_DIR, dirPath);
-    
-    if (!fullPath.startsWith(WORKSPACE_DIR)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    
+    if (!fullPath.startsWith(WORKSPACE_DIR)) return res.status(403).json({ error: 'Access denied' });
     await fs.mkdir(fullPath, { recursive: true });
     res.json({ success: true });
   } catch (error) {
@@ -237,99 +341,63 @@ app.post('/api/createDir', async (req, res) => {
   }
 });
 
-// Delete file/directory endpoint
 app.post('/api/delete', async (req, res) => {
   const { filePath } = req.body;
-  
   try {
     const fullPath = path.resolve(WORKSPACE_DIR, filePath);
-    
-    if (!fullPath.startsWith(WORKSPACE_DIR)) {
-      return res.status(403).json({ error: 'Access denied' });
-    }
-    
+    if (!fullPath.startsWith(WORKSPACE_DIR)) return res.status(403).json({ error: 'Access denied' });
     const stat = await fs.stat(fullPath);
     if (stat.isDirectory()) {
       await fs.rm(fullPath, { recursive: true, force: true });
     } else {
       await fs.unlink(fullPath);
     }
-    
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Kill process endpoint
-app.post('/api/kill', (req, res) => {
-  const { sessionId } = req.body;
-  
-  const childProcess = activeProcesses.get(sessionId);
-  if (childProcess && !childProcess.killed) {
-    childProcess.kill('SIGTERM');
-    activeProcesses.delete(sessionId);
-    res.json({ success: true });
-  } else {
-    res.json({ success: false, error: 'Process not found' });
-  }
-});
-
-// Get workspace path
-app.get('/api/workspace', (req, res) => {
-  res.json({ path: WORKSPACE_DIR });
-});
-
-// Health check
+// ================================================================
+// 🩺 Health Check & Utility
+// ================================================================
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Global error handler
+app.get('/api/workspace', (req, res) => {
+  res.json({ path: WORKSPACE_DIR });
+});
+
+// ================================================================
+// 🔒 Global Error & Shutdown Handlers
+// ================================================================
 app.use((err, req, res, next) => {
   console.error('💥 Unhandled error:', err);
-  if (!res.headersSent) {
-    res.status(500).json({ 
-      success: false, 
-      error: 'Internal server error',
-      message: err.message 
-    });
-  }
+  if (!res.headersSent) res.status(500).json({ success: false, error: err.message });
 });
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('💥 Uncaught Exception:', err);
-});
+process.on('uncaughtException', (err) => console.error('💥 Uncaught Exception:', err));
+process.on('unhandledRejection', (reason, promise) => console.error('💥 Unhandled Rejection:', promise, reason));
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('👋 SIGTERM received, shutting down gracefully...');
-  
-  // Kill all active processes
-  activeProcesses.forEach((proc, sessionId) => {
-    if (!proc.killed) {
-      console.log(`Killing process ${sessionId}`);
-      proc.kill('SIGTERM');
-    }
+  activeProcesses.forEach((proc, id) => {
+    if (!proc.killed) proc.kill('SIGTERM');
   });
-  
   process.exit(0);
 });
 
 app.listen(PORT, () => {
   console.log('');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🚀 Terminal Backend Server Started!');
+  console.log('🚀 AI-Powered Backend Server Started!');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`📡 Server: http://localhost:${PORT}`);
   console.log(`📁 Workspace: ${WORKSPACE_DIR}`);
-  console.log(`🖥️  Platform: ${os.platform()}`);
+  console.log(`🧠 Gemini Model: gemini-2.5-flash`);
+  console.log(`🖥️ Platform: ${os.platform()}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('✅ Ready to accept commands!');
+  console.log('✅ Ready to accept AI + Terminal commands!');
   console.log('');
 });

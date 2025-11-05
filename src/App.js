@@ -2432,6 +2432,7 @@ if (currentView === 'ideation' && ideation) {
   }
 
   // Editor View
+  // Editor View
   if (currentView === 'editor') {
     return (
       <div className="h-screen flex flex-col">
@@ -2447,39 +2448,6 @@ if (currentView === 'ideation' && ideation) {
               <span className="text-sm text-gray-400">Project: </span>
               <span className="font-semibold">{ideation?.projectName || 'Untitled'}</span>
             </div>
-            
-            {/* View Documentation Button */}
-            {generatedDocs && (
-              <button
-                onClick={() => setShowDocsViewer(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <FileText size={16} />
-                View Docs
-              </button>
-            )}
-            
-            {/* Regenerate Documentation Button */}
-            <button
-              onClick={handleRegenerateDocumentation}
-              disabled={isGenerating}
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-              title="Regenerate Documentation"
-            >
-              <FileText size={16} />
-              {isGenerating ? 'Generating...' : 'Update Docs'}
-            </button>
-
-            {/* Generate Tests Button */}
-            <button
-              onClick={handleGenerateTests}
-              disabled={isGeneratingTests}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-              title="Generate Tests"
-            >
-              <CheckCircle size={16} />
-              {isGeneratingTests ? 'Generating...' : 'Generate Tests'}
-            </button>
           </div>
           <button
             onClick={handleStartOver}
