@@ -22,10 +22,9 @@ import {
 } from 'lucide-react';
 
 
-// Mock Auth Context (replace with your actual auth)
-const useAuth = () => ({
-  currentUser: { uid: 'user123', displayName: 'John Doe', email: 'john@example.com' }
-});
+// ✅ Add this import
+import { useAuth } from '../contexts/AuthContext';
+
 
 // Mock Project Service (replace with your actual Firestore service)
 const projectService = {
@@ -335,7 +334,7 @@ const Dashboard = ({ onNewProject, onOpenProject, onLogout }) => {
                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/30"
               >
                 <Plus className="w-5 h-5" />
-                New Project
+                New Workspace
               </button>
               
               <div className="relative">
