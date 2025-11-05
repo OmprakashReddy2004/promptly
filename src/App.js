@@ -1939,10 +1939,22 @@ const handleGenerateIdeation = async (userPrompt) => {
 
   // ✅ go to ideation, NOT editor
   setIdeation(ideationData);
-setTimeout(() => {
+  setTimeout(() => {
   setCurrentView("ideation");
   setTimeout(() => setShowIdeation(true), 150); // ✅ trigger fade-in animation
-}, 900);
+  }, 900);
+
+  const projectId = await createProject({
+    userId: currentUser.uid,
+    prompt: userPrompt,
+    ideation: ideationData,
+    status: "ideation",
+    lastOpened: new Date(),
+  });
+
+  setCurrentProject({ id: projectId, ...ideationData });
+
+
 
 };
 
@@ -2156,6 +2168,7 @@ if (currentView === 'dashboard') {
           if (project.ideation) {
             setIdeation(project.ideation);
             setCurrentView('ideation');
+            updateProject(project.id, { lastOpened: new Date() });
           } else {
             setCurrentView('prompt');
           }
@@ -2271,201 +2284,114 @@ if (currentView === 'dashboard') {
   }
 
   // Ideation View
-  if (currentView === 'ideation' && ideation) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-gray-100 p-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(139,92,246,0.15),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_70%,rgba(236,72,153,0.15),transparent_50%)]"></div>
-        
-        <div className="absolute bottom-12 right-12 w-32 h-32 bg-purple-600/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-20 left-20 w-24 h-24 bg-cyan-600/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-        
-        <div className={`max-w-4xl mx-auto relative z-10 transition-all duration-700 ${showIdeation ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="text-sm text-gray-400 mb-2">App Blueprint</div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                {ideation.projectName}
-              </h1>
-            </div>
-            <button 
-              onClick={handleBack}
-              className="flex items-center gap-2 px-4 py-2 text-gray-300 hover:text-white transition-colors border border-purple-500/30 rounded-lg hover:border-purple-500/50"
-            >
-              <Edit size={18} />
-              <span>Customize</span>
-            </button>
-          </div>
+// ✅ IDEATION VIEW (Replace existing ideation return block ONLY)
+if (currentView === 'ideation' && ideation) {
+  return (
+    <div className="min-h-screen bg-[#0b0c15] text-white relative overflow-hidden px-8 py-10">
 
-          {error && (
-            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-lg mb-6">
-              {error}
-            </div>
-          )}
+  {/* Background Glow */}
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_30%,rgba(124,58,237,0.20),transparent_65%)]"></div>
+  <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_70%,rgba(236,72,153,0.18),transparent_65%)]"></div>
 
-          <div className="mb-8">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">FEATURES</h2>
-            <div className="space-y-3">
-              {ideation.features.map((feature, idx) => (
-                <div 
-                  key={idx} 
-                  className={`flex items-start gap-3 text-gray-300 transition-all duration-500 ${
-                    animateFeatures.includes(idx) 
-                      ? 'opacity-100 translate-x-0' 
-                      : 'opacity-0 -translate-x-4'
-                  }`}
-                  style={{ transitionDelay: `${idx * 50}ms` }}
-                >
-                  <Star size={18} className="mt-0.5 flex-shrink-0 text-purple-400" />
-                  <div>
-                    <span className="text-gray-300">{feature}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4 text-sm text-gray-500">
-              Add features by <span className="text-purple-400 cursor-pointer hover:text-purple-300">customizing the blueprint</span>
-            </div>
-          </div>
+  <div className="max-w-6xl mx-auto relative z-10 space-y-10">
 
-          <div className="mb-8">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">STYLE GUIDELINES</h2>
-            <div className="space-y-4 border border-purple-500/20 rounded-lg p-5 bg-gray-800/30">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 w-40 text-gray-400">
-                  <Palette size={18} />
-                  <span>Color</span>
-                </div>
-                <div className="flex gap-2">
-                  {Object.entries(ideation.colorScheme).map(([name, color]) => {
-                    if (name === 'description') return null;
-                    return (
-                      <div
-                        key={name}
-                        className="w-8 h-8 rounded-full border-2 border-purple-500/40 hover:scale-110 transition-transform cursor-pointer"
-                        style={{ backgroundColor: color }}
-                        title={`${name}: ${color}`}
-                      />
-                    );
-                  })}
-                </div>
+    {/* Header Row */}
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-xs uppercase tracking-widest text-purple-400/70 mb-1">
+          AI Blueprint
+        </p>
+        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          {ideation.projectName}
+        </h1>
+      </div>
+
+      <button
+        onClick={handleBack}
+        className="px-4 py-2 text-sm bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition flex items-center gap-2"
+      >
+        ✏️ Edit Prompt
+      </button>
+    </div>
+
+    {/* Description Card */}
+    <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-6 text-gray-300 leading-relaxed shadow-[0_0_20px_rgba(122,58,237,0.25)]">
+      {ideation.description}
+    </div>
+
+    {/* Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      {/* Key Features */}
+      <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-6 shadow-lg">
+        <h2 className="text-sm font-semibold text-purple-300 mb-4 flex items-center gap-2">
+          ✨ Key Features
+        </h2>
+        <ul className="space-y-3 text-gray-300 text-sm">
+          {ideation.features.map((f,i)=>(
+            <li key={i} className="flex gap-2">
+              <span className="text-pink-400">•</span> {f}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Colors */}
+      <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-6 shadow-lg">
+        <h2 className="text-sm font-semibold text-purple-300 mb-4 flex items-center gap-2">
+          🎨 Color Theme
+        </h2>
+        <div className="flex gap-4 items-center">
+          {Object.entries(ideation.colorScheme)
+            .filter(([k]) => !["description"].includes(k))
+            .map(([k,v]) => (
+              <div key={k} className="flex flex-col items-center">
+                <div className="w-10 h-10 rounded-full border border-white/20" style={{background: v}}></div>
+                <small className="text-gray-400 text-xs mt-1">{k}</small>
               </div>
-
-              {ideation.styleGuidelines?.layout && (
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center gap-2 w-40 text-gray-400 flex-shrink-0">
-                    <Layout size={18} />
-                    <span>Layout</span>
-                  </div>
-                  <div className="text-gray-300">{ideation.styleGuidelines.layout}</div>
-                </div>
-              )}
-
-              {ideation.styleGuidelines?.typography && (
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center gap-2 w-40 text-gray-400 flex-shrink-0">
-                    <Type size={18} />
-                    <span>Typography</span>
-                  </div>
-                  <div className="text-gray-300">{ideation.styleGuidelines.typography}</div>
-                </div>
-              )}
-
-              {ideation.styleGuidelines?.iconography && (
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center gap-2 w-40 text-gray-400 flex-shrink-0">
-                    <Users size={18} />
-                    <span>Iconography</span>
-                  </div>
-                  <div className="text-gray-300">{ideation.styleGuidelines.iconography}</div>
-                </div>
-              )}
-
-              {ideation.styleGuidelines?.animation && (
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center gap-2 w-40 text-gray-400 flex-shrink-0">
-                    <Play size={18} />
-                    <span>Animation</span>
-                  </div>
-                  <div className="text-gray-300">{ideation.styleGuidelines.animation}</div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">STACK</h2>
-            <div className="space-y-3">
-              {ideation.techStack.frontend && ideation.techStack.frontend.length > 0 && (
-                <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-all">
-                  <div className="flex items-center gap-3">
-                    <Code size={18} className="text-purple-400" />
-                    <span className="text-gray-300">Frontend</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-300">{ideation.techStack.frontend.join(', ')}</span>
-                    <ChevronDown size={18} className="text-gray-500" />
-                  </div>
-                </div>
-              )}
-              
-              {ideation.techStack.backend && ideation.techStack.backend.length > 0 && (
-                <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-all">
-                  <div className="flex items-center gap-3">
-                    <Sparkles size={18} className="text-pink-400" />
-                    <span className="text-gray-300">Backend</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-300">{ideation.techStack.backend.join(', ')}</span>
-                    <ChevronDown size={18} className="text-gray-500" />
-                  </div>
-                </div>
-              )}
-
-              {ideation.techStack.database && ideation.techStack.database.length > 0 && (
-                <div className="flex items-center justify-between p-3 bg-gray-800 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-all">
-                  <div className="flex items-center gap-3">
-                    <Layout size={18} className="text-blue-400" />
-                    <span className="text-gray-300">Database</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-gray-300">{ideation.techStack.database.join(', ')}</span>
-                    <ChevronDown size={18} className="text-gray-500" />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="flex gap-4 justify-end">
-            <button
-              onClick={handleStartOver}
-              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold transition-colors border border-gray-600"
-            >
-              Start Over
-            </button>
-            <button
-              onClick={handlePrototype}
-              disabled={loading}
-              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 border border-purple-400/30 hover:shadow-lg hover:shadow-purple-500/50"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  Generating Code & Docs...
-                </>
-              ) : (
-                <>
-                  <FileText size={18} />
-                  Prototype with Docs
-                </>
-              )}
-            </button>
-          </div>
+          ))}
         </div>
       </div>
-    );
-  }
+
+      {/* Tech */}
+      <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-6 shadow-lg">
+        <h2 className="text-sm font-semibold text-purple-300 mb-4">💻 Tech Stack</h2>
+        <div className="text-sm space-y-2 text-gray-300">
+          <p><span className="text-purple-400">Frontend:</span> {ideation.techStack.frontend.join(", ")}</p>
+          <p><span className="text-purple-400">Backend:</span> {ideation.techStack.backend.join(", ")}</p>
+          {ideation.techStack.database && (
+            <p><span className="text-purple-400">Database:</span> {ideation.techStack.database.join(", ")}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Audience */}
+      <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-6 shadow-lg">
+        <h2 className="text-sm font-semibold text-purple-300 mb-4">🎯 Audience & USP</h2>
+        <p className="text-xs text-gray-400 mb-1">Target Users:</p>
+        <p className="text-sm text-gray-300 mb-4">{ideation.targetAudience}</p>
+        <p className="text-xs text-gray-400 mb-1">Unique Value:</p>
+        <p className="text-sm text-gray-300">{ideation.uniqueSellingPoint}</p>
+      </div>
+
+    </div>
+
+    {/* Action */}
+    <div className="flex justify-end">
+      <button
+        onClick={handlePrototype}
+        className="px-6 py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 shadow-[0_0_20px_rgba(236,72,153,0.4)]"
+      >
+        🚀 Prototype This App
+      </button>
+    </div>
+
+  </div>
+</div>
+
+  );
+}
+
 
   // Loading View
   if (currentView === 'loading') {
