@@ -84,9 +84,19 @@ const VSCodeFileExplorer = ({
   useEffect(() => {
     loader.config({
       paths: {
-        vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs'
+        vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs'
       }
-    });    
+    });
+    
+    loader.init().then(() => {
+      console.log('✅ Monaco Editor initialized');
+    }).catch((error) => {
+      console.error('❌ Monaco initialization failed:', error);
+      setTerminalOutput(prev => [...prev, { 
+        type: 'error', 
+        text: '❌ Editor failed to initialize. Refreshing may help.' 
+      }]);
+    });
   }, []);
 
   // Check backend connection
