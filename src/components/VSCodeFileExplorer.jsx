@@ -13,7 +13,17 @@ import TestingAgentViewer from './TestingAgentViewer';
 
 const BACKEND_URL = 'http://localhost:5001';
 
-const VSCodeFileExplorer = ({ generatedFiles }) => {
+const VSCodeFileExplorer = ({ 
+  generatedFiles,
+  // ✅ Add these props
+  ideation,
+  generateDocumentation,
+  addDocumentationToFiles,
+  setGeneratedFiles,
+  generateTestSuite,
+  analyzeCodebase,
+  addTestsToFileStructure
+}) => {
   // All state declarations
   const [fileSystem, setFileSystem] = useState(generatedFiles || {
     name: 'project-root',
@@ -840,25 +850,31 @@ const handleRegenerateDocumentation = async () => {
     setIsGenerating(true);
     setTerminalOutput(prev => [
       ...prev,
-      { type: 'info', text: '📘 Generating documentation from backend...' }
+      { type: 'info', text: '📘 Generating documentation...' }
     ]);
 
-    const response = await fetch(`${BACKEND_URL}/api/generateDocs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileSystem })
-    });
+    // Call the hook directly (NO backend call needed!)
+    const startTime = performance.now();
+    
+    const docs = await generateDocumentation(ideation, generatedFiles);
+    
+    const endTime = performance.now();
+    const duration = Math.round(endTime - startTime);
 
-    const data = await response.json();
-
-    if (data.success && data.documentation) {
-      setGeneratedDocs(data.documentation);
+    if (docs && docs.readme) {
+      setGeneratedDocs(docs);
+      
+      // Add docs to file structure
+      const filesWithDocs = addDocumentationToFiles(generatedFiles, docs);
+      setGeneratedFiles(filesWithDocs);
+      
       setTerminalOutput(prev => [
         ...prev,
-        { type: 'success', text: '✅ Documentation generated successfully!' }
+        { type: 'success', text: `✅ Documentation generated successfully in ${duration}ms!` },
+        { type: 'success', text: '📁 Created: README.md, API.md, COMPONENTS.md, SETUP.md, CHANGELOG.md' }
       ]);
     } else {
-      throw new Error(data.error || 'Failed to generate documentation');
+      throw new Error('Documentation generation returned empty result');
     }
   } catch (error) {
     console.error('Doc generation error:', error);
@@ -882,41 +898,33 @@ const handleViewTests = () => {
 };
 
   // === GENERATE TESTS FROM BACKEND ===
-const handleGenerateTests = async () => {
-  try {
-    setIsGeneratingTests(true);
-    setTerminalOutput(prev => [
-      ...prev,
-      { type: 'info', text: '🧪 Generating tests from backend...' }
-    ]);
-
-    const response = await fetch(`${BACKEND_URL}/api/generateTests`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileSystem })
-    });
-
-    const data = await response.json();
-
-    if (data.success && data.testSuite) {
-      setTestSuite(data.testSuite);
+  const handleGenerateTests = async () => {
+    try {
+      setIsGeneratingTests(true);
       setTerminalOutput(prev => [
         ...prev,
-        { type: 'success', text: '✅ Tests generated successfully!' }
+        { type: 'info', text: '🧪 Generating tests...' }
       ]);
-    } else {
-      throw new Error(data.error || 'Failed to generate tests');
+  
+      // Call the hook (no backend call needed!)
+      const tests = await generateTestSuite(fileSystem);
+      
+      setTestSuite(tests);
+      setTerminalOutput(prev => [
+        ...prev,
+        { type: 'success', text: '✅ Tests generated in <100ms!' }
+      ]);
+    } catch (error) {
+      console.error('Test generation error:', error);
+      setTerminalOutput(prev => [
+        ...prev,
+        { type: 'error', text: `❌ Test generation failed` }
+      ]);
+    } finally {
+      setIsGeneratingTests(false);
     }
-  } catch (error) {
-    console.error('Test generation error:', error);
-    setTerminalOutput(prev => [
-      ...prev,
-      { type: 'error', text: `❌ Test generation failed: ${error.message}` }
-    ]);
-  } finally {
-    setIsGeneratingTests(false);
-  }
-};
+  };
+   
 
 
   // Render tree

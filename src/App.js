@@ -7,13 +7,14 @@ import UserProfile from './components/UserProfile';
 import ErrorDisplay from './components/ErrorDisplay';
 import DocumentationViewer from './components/DocumentationViewer';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { useDocumentationAgent, DocumentationModal } from './hooks/useDocumentationAgent';
-import { useTestingAgent, TestingModal } from './hooks/useTestingAgent';
 import TestingAgentViewer from './components/TestingAgentViewer';
 import { CheckCircle } from 'lucide-react';
 import Dashboard from './components/Dashboard';
 import { createProject, getProject, updateProject } from './services/projectService';
 import PromptView from './components/PromptView';
+import { useDocumentationAgent, DocumentationModal } from './hooks/useDocumentationAgent';
+import { useTestingAgent, TestingModal } from './hooks/useTestingAgent';
+
 
 //ADD YOUR GEMINI API KEY HERE
 const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'your-gemini-api-key-here';
@@ -562,7 +563,7 @@ function AppContent() {
     addDocumentationToFiles, 
     isGenerating, 
     documentationProgress 
-  } = useDocumentationAgent();
+  } = useDocumentationAgent(); 
 
   // Testing Agent States
   const [showTestModal, setShowTestModal] = useState(false);
@@ -576,7 +577,7 @@ function AppContent() {
     addTestsToFileStructure, 
     isGenerating: isGeneratingTests, 
     testProgress 
-  } = useTestingAgent();
+  } = useTestingAgent();  
   
 
   if (authLoading) {
@@ -1994,6 +1995,8 @@ const handleGenerateIdeation = async (userPrompt) => {
     }
   };
 
+
+
   const handleRegenerateDocumentation = async () => {
     if (!generatedFiles || !ideation) {
       alert('Please generate code first!');
@@ -2002,13 +2005,21 @@ const handleGenerateIdeation = async (userPrompt) => {
 
     try {
       setShowDocModal(true);
+      
+      // ✅ generateDocumentation is now defined (from hook above)
       const docs = await generateDocumentation(ideation, generatedFiles);
+      
       setGeneratedDocs(docs);
       
+      // ✅ addDocumentationToFiles is now defined (from hook above)
       const filesWithDocs = addDocumentationToFiles(generatedFiles, docs);
+      
+      // ✅ setGeneratedFiles is now defined (from useState above)
       setGeneratedFiles(filesWithDocs);
       
       setShowDocModal(false);
+      setShowDocsViewer(true);
+      
     } catch (error) {
       console.error('Documentation regeneration failed:', error);
       setShowDocModal(false);
@@ -2016,23 +2027,6 @@ const handleGenerateIdeation = async (userPrompt) => {
     }
   };
 
-  const handleBack = () => {
-    if (currentView === 'ideation') {
-      setCurrentView('prompt');
-      setIdeation(null);
-      setError('');
-      setShowIdeation(false);
-      setAnimateFeatures([]);
-    } else if (currentView === 'editor') {
-      setCurrentView('ideation');
-      setGeneratedFiles(null);
-      setGeneratedDocs(null);
-      setError('');
-    } else if (currentView === 'loading') {
-      setCurrentView('ideation');
-      setError('');
-    }
-  };
 
   const handleStartOver = () => {
     setCurrentView('prompt');
@@ -2046,26 +2040,47 @@ const handleGenerateIdeation = async (userPrompt) => {
     setLoading(false);
   };
 
+  const handleBack = () => {
+    if (currentView === 'ideation') {
+      // Go back from ideation to prompt
+      setCurrentView('prompt');
+      setIdeation(null);
+      setError('');
+      setShowIdeation(false);
+      setAnimateFeatures([]);
+    } else if (currentView === 'editor') {
+      // Go back from editor to ideation
+      setCurrentView('ideation');
+      setGeneratedFiles(null);
+      setGeneratedDocs(null);
+      setError('');
+    } else if (currentView === 'loading') {
+      // Go back from loading to ideation
+      setCurrentView('ideation');
+      setError('');
+    }
+  };
+
   const handleGenerateTests = async () => {
     if (!generatedFiles) {
       alert('Please generate code first!');
       return;
     }
-  
+
     try {
       setShowTestModal(true);
       
-      // Generate tests
+      // ✅ generateTestSuite is now defined (from hook above)
       const tests = await generateTestSuite(generatedFiles);
       
-      // Analyze code quality
+      // ✅ analyzeCodebase is now defined (from hook above)
       const quality = await analyzeCodebase(generatedFiles);
       
       if (tests.success) {
         setTestSuite(tests);
         setCodeQuality(quality);
         
-        // Add tests to file structure
+        // ✅ addTestsToFileStructure is now defined (from hook above)
         const filesWithTests = addTestsToFileStructure(generatedFiles, tests);
         setGeneratedFiles(filesWithTests);
         
@@ -2081,6 +2096,7 @@ const handleGenerateIdeation = async (userPrompt) => {
       setShowTestModal(false);
     }
   };
+
   
   const handleViewTests = () => {
     if (testSuite) {
@@ -2456,8 +2472,17 @@ if (currentView === 'ideation' && ideation) {
             Start Over
           </button>
         </div>
-        <VSCodeFileExplorer generatedFiles={generatedFiles} />
-        
+        <VSCodeFileExplorer 
+            generatedFiles={generatedFiles}
+            // ✅ Add these new props:
+            ideation={ideation}
+            generateDocumentation={generateDocumentation}
+            addDocumentationToFiles={addDocumentationToFiles}
+            setGeneratedFiles={setGeneratedFiles}
+            generateTestSuite={generateTestSuite}
+            analyzeCodebase={analyzeCodebase}
+            addTestsToFileStructure={addTestsToFileStructure}
+          />
         {/* Documentation Generation Modal */}
         <DocumentationModal 
           isOpen={showDocModal}
