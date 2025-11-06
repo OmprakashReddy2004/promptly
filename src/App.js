@@ -13,7 +13,7 @@ import Dashboard from './components/Dashboard';
 import { createProject, getProject, updateProject } from './services/projectService';
 import PromptView from './components/PromptView';
 import { useDocumentationAgent, DocumentationModal } from './hooks/useDocumentationAgent';
-import { useTestingAgent, TestingModal } from './hooks/useTestingAgent';
+import { useTestingAgent} from './hooks/useTestingAgent';
 import { logOut } from './firebase/auth';
 
 
@@ -2514,13 +2514,7 @@ if (currentView === 'ideation' && ideation) {
           />
         )}
 
-        {/* Testing Agent Modal */}
-        <TestingModal 
-          isOpen={showTestModal}
-          onClose={() => setShowTestModal(false)}
-          progress={testProgress}
-          results={testSuite}
-        />
+
 
         {/* Testing Agent Viewer */}
         {showTestViewer && (
