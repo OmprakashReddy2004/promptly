@@ -781,22 +781,34 @@ Be SPECIFIC. Don't say "manage tasks", say "add, edit, delete, and mark tasks co
 // Multi-stage generation for better, more functional code
 // ============================================================================
 
-const generateFilesFromIdeation = async () => {
+// ============================================================================
+// IMPROVED generateFilesFromIdeation FUNCTION - FIXED VERSION
+// Multi-stage generation for better, more functional code
+// ============================================================================
+
+const generateFilesFromIdeation = async (ideationData = null) => {
   setLoading(true);
   setError('');
+  
+  // Use passed ideationData or fall back to state
+  const currentIdeation = ideationData || ideation;
+  
+  if (!currentIdeation) {
+    throw new Error('No ideation data available');
+  }
   
   try {
     // Create focused, concise context
     const ideationContext = `
-PROJECT: ${ideation.projectName}
-DESCRIPTION: ${ideation.description}
-TARGET: ${ideation.targetAudience}
+PROJECT: ${currentIdeation.projectName}
+DESCRIPTION: ${currentIdeation.description}
+TARGET: ${currentIdeation.targetAudience}
 
 KEY FEATURES:
-${ideation.features.map((f, i) => `${i + 1}. ${f}`).join('\n')}
+${currentIdeation.features.map((f, i) => `${i + 1}. ${f}`).join('\n')}
 
-TECH: ${ideation.techStack.frontend.join(', ')}
-COLORS: Primary=${ideation.colorScheme.primary}, Secondary=${ideation.colorScheme.secondary}, Accent=${ideation.colorScheme.accent}
+TECH: ${currentIdeation.techStack.frontend.join(', ')}
+COLORS: Primary=${currentIdeation.colorScheme.primary}, Secondary=${currentIdeation.colorScheme.secondary}, Accent=${currentIdeation.colorScheme.accent}
 `;
 
     const response = await fetch(
@@ -853,19 +865,19 @@ CRITICAL REQUIREMENTS (must follow):
         {
           "name": "index.html",
           "type": "file",
-          "content": "<!DOCTYPE html>\\n<html lang=\\"en\\">\\n<head>\\n<meta charset=\\"utf-8\\"/>\\n<meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\"/>\\n<title>${ideation.projectName}</title>\\n</head>\\n<body><div id=\\"root\\"></div></body>\\n</html>"
+          "content": "<!DOCTYPE html>\\n<html lang=\\"en\\">\\n<head>\\n<meta charset=\\"utf-8\\"/>\\n<meta name=\\"viewport\\" content=\\"width=device-width,initial-scale=1\\"/>\\n<title>${currentIdeation.projectName}</title>\\n</head>\\n<body><div id=\\"root\\"></div></body>\\n</html>"
         }
       ]
     },
     {
       "name": "package.json",
       "type": "file",
-      "content": "{\\"name\\":\\"${ideation.projectName.toLowerCase().replace(/\\s+/g, '-')}\\",\\"version\\":\\"1.0.0\\",\\"dependencies\\":{\\"react\\":\\"^18.2.0\\",\\"react-dom\\":\\"^18.2.0\\",\\"react-scripts\\":\\"5.0.1\\"},\\"scripts\\":{\\"start\\":\\"react-scripts start\\",\\"build\\":\\"react-scripts build\\"}}"
+      "content": "{\\"name\\":\\"${currentIdeation.projectName.toLowerCase().replace(/\\s+/g, '-')}\\",\\"version\\":\\"1.0.0\\",\\"dependencies\\":{\\"react\\":\\"^18.2.0\\",\\"react-dom\\":\\"^18.2.0\\",\\"react-scripts\\":\\"5.0.1\\"},\\"scripts\\":{\\"start\\":\\"react-scripts start\\",\\"build\\":\\"react-scripts build\\"}}"
     },
     {
       "name": "README.md",
       "type": "file",
-      "content": "# ${ideation.projectName}\\n\\n${ideation.description}\\n\\n## Features\\n${ideation.features.map((f, i) => `${i+1}. ${f}`).join('\\n')}\\n\\n## Setup\\n\`\`\`bash\\nnpm install\\nnpm start\\nnpm run build\\n\`\`\`"
+      "content": "# ${currentIdeation.projectName}\\n\\n${currentIdeation.description}\\n\\n## Features\\n${currentIdeation.features.map((f, i) => `${i+1}. ${f}`).join('\\n')}\\n\\n## Setup\\n\`\`\`bash\\nnpm install\\nnpm start\\nnpm run build\\n\`\`\`"
     }
   ]
 }
@@ -1012,7 +1024,7 @@ Return ONLY the JSON object with complete, working code.`
     
     if (!fileStructure || !fileStructure.name || !fileStructure.children?.length) {
       console.warn('Invalid structure, using enhanced fallback');
-      fileStructure = createEnhancedFallbackStructure(ideation);
+      fileStructure = createEnhancedFallbackStructure(currentIdeation);
     }
 
     setLoading(false);
@@ -1021,7 +1033,7 @@ Return ONLY the JSON object with complete, working code.`
   } catch (err) {
     console.error('Error generating files:', err);
     console.log('🔧 Creating enhanced functional website...');
-    const fallbackStructure = createEnhancedFallbackStructure(ideation);
+    const fallbackStructure = createEnhancedFallbackStructure(currentIdeation);
     
     setError('⚠️ AI generation had issues. Created a functional starter website for you!');
     setLoading(false);
