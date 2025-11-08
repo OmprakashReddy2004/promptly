@@ -140,17 +140,18 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
     <div className="min-h-screen bg-gradient-to-br from-[#090b1a] via-[#0e1130] to-[#1a093b] text-white">
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-200px] right-[-100px] w-[500px] h-[500px] bg-purple-600/20 blur-[160px] animate-pulse" />
+      <div className="absolute top-[-100px] right-[-50px] w-[300px] h-[300px] bg-purple-500/10 blur-[120px]" />
+        <div className="absolute bottom-[-100px] left-[-50px] w-[300px] h-[300px] bg-cyan-500/10 blur-[120px]" />
         <div className="absolute bottom-[-200px] left-[-100px] w-[500px] h-[500px] bg-cyan-500/20 blur-[160px] animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-8">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <button
               onClick={onBack}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm transition-all"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Back to Dashboard</span>
@@ -167,7 +168,7 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
 
           <button
             onClick={onOpenEditor}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 rounded-xl font-semibold transition-all shadow-lg shadow-purple-500/30"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/70 to-cyan-500/70 hover:from-purple-500 hover:to-cyan-500 rounded-lg text-sm font-medium transition-all shadow-md shadow-purple-500/20"
           >
             <Eye className="w-5 h-5" />
             Open Editor
@@ -175,7 +176,7 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
         </div>
 
         {/* Overall Progress Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 mb-8">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg p-5 mb-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold text-white mb-2">Project Progress</h2>
@@ -205,7 +206,7 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
           <div className="grid grid-cols-5 gap-4">
             {Object.entries(stages).map(([stage, progress]) => (
               <div key={stage} className="text-center">
-                <div className={`w-12 h-12 mx-auto mb-2 rounded-xl flex items-center justify-center ${
+                <div className={`w-8 h-8 mx-auto mb-1 rounded-lg flex items-center justify-center ${
                   progress === 100 ? 'bg-green-500/20 border border-green-400/30' : 'bg-white/5 border border-white/10'
                 }`}>
                   {progress === 100 ? (
@@ -223,7 +224,7 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
 
         {/* Project Stats */}
         <div className="grid grid-cols-4 gap-4 mb-8">
-          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4">
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Files</p>
@@ -280,7 +281,7 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
               return (
                 <div
                   key={agent.id}
-                  className={`relative bg-white/5 backdrop-blur-xl border rounded-2xl p-6 transition-all duration-300 ${
+                  className={`relative bg-white/5 backdrop-blur-md border rounded-lg p-4 transition-all duration-200 ${
                     agent.status === 'locked' 
                       ? 'border-gray-700 opacity-60' 
                       : 'border-white/10 hover:border-white/20 hover:bg-white/10 hover:scale-105'
@@ -333,7 +334,7 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
                   <button
                     onClick={() => handleRunAgent(agent)}
                     disabled={agent.status === 'locked' || isActive}
-                    className={`w-full py-3 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                    className={`w-full py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
                       agent.status === 'locked'
                         ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
                         : isActive
@@ -371,7 +372,7 @@ const ProjectPage = ({ project, onBack, onRunAgent, onOpenEditor }) => {
         <div className="mt-8 flex gap-4">
           <button
             onClick={onOpenEditor}
-            className="flex-1 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-500/50 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-purple-400/50 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
           >
             <Code className="w-5 h-5" />
             Open Code Editor
