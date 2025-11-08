@@ -1,47 +1,148 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Code2, Bug, TestTube, FileText, Rocket, Sparkles, Twitter, Github, Linkedin } from 'lucide-react';
+import {
+  motion,
+  useScroll,
+  useTransform,
+  useSpring,
+} from "framer-motion";
 
-// Hero Parallax Component
+// Hero Parallax Component with Framer Motion
 const HeroParallax = ({ products }) => {
-  const [scrollY, setScrollY] = useState(0);
+  const firstRow = products.slice(0, 5);
+  const secondRow = products.slice(5, 10);
+  const thirdRow = products.slice(10, 15);
+  const ref = React.useRef(null);
   
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
 
-  const transform = Math.min(scrollY / 3, 100);
+  const springConfig = { stiffness: 300, damping: 30, bounce: 100 };
+
+  const translateX = useSpring(
+    useTransform(scrollYProgress, [0, 1], [0, 1000]),
+    springConfig
+  );
+  const translateXReverse = useSpring(
+    useTransform(scrollYProgress, [0, 1], [0, -1000]),
+    springConfig
+  );
+  const rotateX = useSpring(
+    useTransform(scrollYProgress, [0, 0.2], [15, 0]),
+    springConfig
+  );
+  const opacity = useSpring(
+    useTransform(scrollYProgress, [0, 0.2], [0.2, 1]),
+    springConfig
+  );
+  const rotateZ = useSpring(
+    useTransform(scrollYProgress, [0, 0.2], [20, 0]),
+    springConfig
+  );
+  const translateY = useSpring(
+    useTransform(scrollYProgress, [0, 0.2], [-700, 500]),
+    springConfig
+  );
 
   return (
-    <div className="relative h-screen flex flex-col items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 z-0" style={{ transform: `translateY(${transform}px)` }}>
-        <div className="grid grid-cols-3 gap-4 p-4 opacity-20 blur-sm">
-          {products.slice(0, 9).map((product, idx) => (
-            <div key={idx} className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
-              <img src={product.thumbnail} alt={product.title} className="w-full h-full object-cover" />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="relative z-10 text-center px-4 max-w-5xl">
+    <div
+      ref={ref}
+      className="h-[300vh] py-40 overflow-hidden antialiased relative flex flex-col self-auto [perspective:1000px] [transform-style:preserve-3d]"
+    >
+      {/* Header Section */}
+      <div className="max-w-7xl relative mx-auto py-20 md:py-40 px-4 w-full left-0 top-0">
         <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-br from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
           AI-Powered Development Platform
         </h1>
-        <p className="text-xl md:text-2xl text-gray-300 mb-8">
+        <p className="max-w-2xl text-xl md:text-2xl mt-8 text-gray-300">
           Transform your workflow with intelligent agents that code, test, debug, document, and deploy
         </p>
       </div>
+
+      {/* Parallax Cards */}
+      <motion.div
+        style={{
+          rotateX,
+          rotateZ,
+          translateY,
+          opacity,
+        }}
+      >
+        <motion.div className="flex flex-row-reverse space-x-reverse space-x-20 mb-20">
+          {firstRow.map((product) => (
+            <ProductCard
+              product={product}
+              translate={translateX}
+              key={product.title}
+            />
+          ))}
+        </motion.div>
+        <motion.div className="flex flex-row mb-20 space-x-20">
+          {secondRow.map((product) => (
+            <ProductCard
+              product={product}
+              translate={translateXReverse}
+              key={product.title}
+            />
+          ))}
+        </motion.div>
+        <motion.div className="flex flex-row-reverse space-x-reverse space-x-20">
+          {thirdRow.map((product) => (
+            <ProductCard
+              product={product}
+              translate={translateX}
+              key={product.title}
+            />
+          ))}
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
 
+const ProductCard = ({ product, translate }) => {
+  return (
+    <motion.div
+      style={{
+        x: translate,
+      }}
+      whileHover={{
+        y: -20,
+      }}
+      key={product.title}
+      className="group/product h-96 w-[30rem] relative flex-shrink-0"
+    >
+      <a
+        href={product.link}
+        className="block group-hover/product:shadow-2xl"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img
+          src={product.thumbnail}
+          height="600"
+          width="600"
+          className="object-cover object-left-top absolute h-full w-full inset-0 rounded-lg"
+          alt={product.title}
+        />
+      </a>
+      <div className="absolute inset-0 h-full w-full opacity-0 group-hover/product:opacity-80 bg-black pointer-events-none rounded-lg"></div>
+      <h2 className="absolute bottom-4 left-4 opacity-0 group-hover/product:opacity-100 text-white font-semibold text-xl">
+        {product.title}
+      </h2>
+    </motion.div>
+  );
+};
+
 // Moving Border Button
-const MovingBorderButton = ({ children, className, onClick }) => {
+const MovingBorderButton = ({ children, className, onClick, style }) => {
   return (
     <button
       onClick={onClick}
       className={`relative px-8 py-3 rounded-lg font-medium transition-all duration-300 ${className}`}
+      style={style}
     >
       <span className="relative z-10">{children}</span>
       <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 opacity-0 hover:opacity-20 transition-opacity duration-300" />
@@ -160,7 +261,13 @@ export default function LandingPage({ onGetStarted }) {
     { title: "Pixel Perfect", link: "https://app.pixelperfect.quest", thumbnail: "https://aceternity.com/images/products/thumbnails/new/pixelperfect.png" },
     { title: "Algochurn", link: "https://algochurn.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/algochurn.png" },
     { title: "Aceternity UI", link: "https://ui.aceternity.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/aceternityui.png" },
-    { title: "Tailwind Master Kit", link: "https://tailwindmasterkit.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/tailwindmasterkit.png" }
+    { title: "Tailwind Master Kit", link: "https://tailwindmasterkit.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/tailwindmasterkit.png" },
+    { title: "SmartBridge", link: "https://smartbridgetech.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/smartbridge.png" },
+    { title: "Renderwork Studio", link: "https://renderwork.studio", thumbnail: "https://aceternity.com/images/products/thumbnails/new/renderwork.png" },
+    { title: "Creme Digital", link: "https://cremedigital.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/cremedigital.png" },
+    { title: "Golden Bells Academy", link: "https://goldenbellsacademy.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/goldenbellsacademy.png" },
+    { title: "Invoker Labs", link: "https://invoker.lol", thumbnail: "https://aceternity.com/images/products/thumbnails/new/invoker.png" },
+    { title: "E Free Invoice", link: "https://efreeinvoice.com", thumbnail: "https://aceternity.com/images/products/thumbnails/new/efreeinvoice.png" }
   ];
 
   return (
@@ -175,7 +282,6 @@ export default function LandingPage({ onGetStarted }) {
             <span className="text-xl font-bold text-white">Neon Board</span>
           </a>
           
-          {/* ✅ Simple Get Started Button - No Dialog */}
           <MovingBorderButton 
             onClick={onGetStarted}
             className="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:scale-105 hover:shadow-lg"
@@ -184,7 +290,7 @@ export default function LandingPage({ onGetStarted }) {
           </MovingBorderButton>
         </header>
 
-        {/* Hero Section */}
+        {/* Hero Section with Parallax */}
         <HeroParallax products={products} />
 
         {/* Agents Section */}
@@ -200,13 +306,44 @@ export default function LandingPage({ onGetStarted }) {
             </div>
             
             <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-              <AgentCard icon={<Code2 className="w-8 h-8" />} title="Coding Agent" description="Writes and optimizes your code in real time." delay={0} />
-              <AgentCard icon={<TestTube className="w-8 h-8" />} title="Testing Agent" description="Automates test creation, execution, and reporting." delay={0.1} />
-              <AgentCard icon={<Bug className="w-8 h-8" />} title="Debugging Agent" description="Finds and fixes bugs with intelligent recommendations." delay={0.2} />
-              <AgentCard icon={<FileText className="w-8 h-8" />} title="Documentation Agent" description="Generates clear, developer-friendly docs instantly." delay={0.3} />
-              <AgentCard icon={<Rocket className="w-8 h-8" />} title="Deployment Agent" description="Pushes your project live with seamless CI/CD support." delay={0.4} />
-            </div>
+                <AgentCard 
+                    icon={<TestTube className="w-8 h-8" />} 
+                    title="Ideation Agent" 
+                    description="Turns raw ideas into actionable project concepts." 
+                    delay={0} 
+                />
+
+                <AgentCard 
+                    icon={<Code2 className="w-8 h-8" />} 
+                    title="Coding Agent" 
+                    description="Writes and optimizes clean, efficient code." 
+                    delay={0.1} 
+                />
+
+                <AgentCard 
+                    icon={<Bug className="w-8 h-8" />} 
+                    title="Debugging Agent" 
+                    description="Finds and fixes code errors instantly." 
+                    delay={0.2} 
+                />
+
+                <AgentCard 
+                    icon={<FileText className="w-8 h-8" />} 
+                    title="Documentation Agent" 
+                    description="Creates clear and concise documentation." 
+                    delay={0.3} 
+                />
+
+                <AgentCard 
+                    icon={<Rocket className="w-8 h-8" />} 
+                    title="Testing Agent" 
+                    description="Runs tests to ensure code stability." 
+                    delay={0.4} 
+                />
+                </div>
+
           </div>
+          
 
           {/* CTA Section */}
           <div className="text-center container mx-auto px-4 pb-20 md:pb-32 max-w-7xl">
