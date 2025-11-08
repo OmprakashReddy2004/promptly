@@ -1846,13 +1846,15 @@ const handleGenerateIdeation = async (userPrompt) => {
   setTimeout(() => setShowIdeation(true), 150); // ✅ trigger fade-in animation
   }, 900);
 
-  const projectId = await createProject({
-    userId: currentUser.uid,
-    prompt: userPrompt,
+  const { projectId } = await createProject(currentUser.uid, {
+    name: ideationData.projectName,
+    description: ideationData.description,
     ideation: ideationData,
-    status: "ideation",
+    prompt: userPrompt,
+    status: 'ideation',
     lastOpened: new Date(),
   });
+  
 
   setCurrentProject({ id: projectId, ...ideationData });
 
